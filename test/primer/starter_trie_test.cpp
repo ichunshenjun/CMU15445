@@ -41,7 +41,7 @@ std::vector<std::string> GenerateNRandomString(int n) {
   return rand_strs;
 }
 
-TEST(StarterTest, DISABLED_TrieNodeInsertTest) {
+TEST(StarterTest, TrieNodeInsertTest) {
   // Test Insert
   //  When same key is inserted twice, insert should return nullptr
   // When inserted key and unique_ptr's key does not match, return nullptr
