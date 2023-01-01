@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
@@ -225,7 +226,9 @@ class TrieNodeWithValue : public TrieNode {
    * @param key_char Key char of this node
    * @param value Value of this node
    */
-  TrieNodeWithValue(char key_char, T value) {}
+  TrieNodeWithValue(char key_char, T value):TrieNode(key_char),value_(value) {
+    SetEndNode(true);
+  }
 
   /**
    * @brief Destroy the Trie Node With Value object
@@ -258,7 +261,10 @@ class Trie {
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() = default;
+  Trie() {
+    auto root=new TrieNode('\0');
+    root_.reset(root);
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -288,6 +294,23 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
+    if(key.empty())
+    return false;
+    const size_t key_size=key.size();
+    auto match_node=&this->root_;
+    for(size_t i=0;i<key_size;i++){
+      if(match_node->get()->GetChildNode(key[i])==nullptr){
+        match_node->get()->InsertChildNode(key[i], std::make_unique<TrieNode>(key[i]));
+      }
+      if(i==key_size-1){
+        if(match_node->get()->IsEndNode())
+          return false;
+        auto origin_node=match_node->get()->GetChildNode(key[i]);
+        auto new_node=std::make_unique<TrieNodeWithValue<T>>(std::move(**origin_node),value);
+        origin_node->reset(new_node);
+        return true;
+      }
+    }
     return false;
   }
 
@@ -308,7 +331,36 @@ class Trie {
    * @param key Key used to traverse the trie and find correct node
    * @return True if key exists and is removed, false otherwise
    */
-  bool Remove(const std::string &key) { return false; }
+  bool Remove(const std::string &key) { 
+    if(key.empty())
+      return false;
+    const size_t key_size=key.size();
+    auto match_node=&this->root_;
+    auto node_stack=std::stack<std::unique_ptr<TrieNode> *>();
+    for(size_t i=0;i<key_size;i++){
+      char key_char=key[i];
+      if(match_node->get()->GetChildNode(key_char)==nullptr)
+        return false;
+      node_stack.push(match_node);
+      auto match_node=match_node->get()->GetChildNode(key_char);
+      if(i==key_size-1){
+        if(!match_node->get()->IsEndNode())
+          break;
+        //match_node->get()->SetEndNode(false);
+        if(match_node->get()->HasChildren())
+          return true;
+        node_stack.top()->get()->RemoveChildNode(key_char);
+        while(node_stack.size()>1){
+          auto node=node_stack.top();
+          if(node->get()->HasChildren()||node->get()->IsEndNode())
+            break;
+          node_stack.pop();
+          node_stack.top()->get()->RemoveChildNode(node->get()->GetKeyChar());
+        }
+        return true;
+      }
+    }
+    return false; }
 
   /**
    * TODO(P0): Add implementation
@@ -330,6 +382,23 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
+    size_t key_size=key.size();
+    auto match_node=&this->root;
+    for(size_t i=0;i<key_size;i++){
+      char key_char=key[i];
+      if(match_node->get()->GetChildNode(key_char)==nullptr)
+        break;
+      if(i==key_size-1){
+        if(match_node->get()->IsEndNode()){
+          auto temp_node=dynamic_cast<TrieNodeWithValue<T> *>(match_node->get());
+          if(temp_node!=nullptr){
+            *success=true;
+            return temp_node->GetValue();
+          }
+          
+        }
+      }
+    }
     *success = false;
     return {};
   }
