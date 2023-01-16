@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "buffer/lru_k_replacer.h"
-#include "common/logger.h"
 #include "gtest/gtest.h"
 
 namespace bustub {
@@ -564,4 +563,5 @@ TEST(LRUKReplacerTest, ConcurrencyTest) {  // NOLINT
     ASSERT_EQ(i, evicted_elements[i - 500]);
   }
 }
+
 }  // namespace bustub

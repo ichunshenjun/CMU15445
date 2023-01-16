@@ -16,6 +16,7 @@
 #include <list>
 #include <mutex>  // NOLINT
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "common/config.h"
@@ -132,13 +133,23 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
+  struct FrameEntry {
+    size_t hit_count_{0};
+    bool evictable_{true};
+  };
+
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
   [[maybe_unused]] size_t current_timestamp_{0};
-  [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
+  size_t curr_size_{0};
+  size_t replacer_size_;
+  size_t k_;
+  std::vector<std::pair<frame_id_t, FrameEntry>> lru_;
+  std::vector<std::pair<frame_id_t, FrameEntry>> lru_k_;
+  // std::list<frame_id_t> history_list_;
+  // std::list<frame_id_t> cache_list_;
+  // std::unordered_map<frame_id_t, FrameEntry>;
   std::mutex latch_;
 };
 

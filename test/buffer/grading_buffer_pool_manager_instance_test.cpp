@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <common/logger.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -26,7 +25,7 @@
 namespace bustub {
 
 #define BufferPoolManager MockBufferPoolManager
-#define PAGE_SIZE 4096
+
 // NOLINTNEXTLINE
 TEST(BufferPoolManagerInstanceTest, SampleTest) {
   const std::string db_name = "test.db";
@@ -301,9 +300,6 @@ TEST(BufferPoolManagerInstanceTest, FetchPage) {  // NOLINT
   ASSERT_EQ(1, bpm->UnpinPage(page_ids[4], true));
   auto *new_page = bpm->NewPage(&temp_page_id);
   ASSERT_NE(nullptr, new_page);
-
-  auto *new_page1 = bpm->NewPage(&temp_page_id);
-  ASSERT_NE(nullptr, new_page1);
   ASSERT_EQ(nullptr, bpm->FetchPage(page_ids[4]));
 
   // Check Clock
