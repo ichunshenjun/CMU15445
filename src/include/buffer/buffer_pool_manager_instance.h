@@ -44,10 +44,10 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   /**
    * @brief Destroy an existing BufferPoolManagerInstance.
    */
-  ~BufferPoolManagerInstance() override;
+  ~BufferPoolManagerInstance();
 
   /** @brief Return the size (number of frames) of the buffer pool. */
-  auto GetPoolSize() -> size_t override { return pool_size_; }
+  auto GetPoolSize() -> size_t { return pool_size_; }
 
   /** @brief Return the pointer to all the pages in the buffer pool. */
   auto GetPages() -> Page * { return pages_; }
@@ -70,7 +70,7 @@ class BufferPoolManagerInstance : public BufferPoolManager {
    * @param[out] page_id id of created page
    * @return nullptr if no new pages could be created, otherwise pointer to new page
    */
-  auto NewPgImp(page_id_t *page_id) -> Page * override;
+  auto NewPgImp(page_id_t *page_id) -> Page *;
 
   /**
    * TODO(P1): Add implementation
@@ -88,7 +88,7 @@ class BufferPoolManagerInstance : public BufferPoolManager {
    * @param page_id id of page to be fetched
    * @return nullptr if page_id cannot be fetched, otherwise pointer to the requested page
    */
-  auto FetchPgImp(page_id_t page_id) -> Page * override;
+  auto FetchPgImp(page_id_t page_id) -> Page *;
 
   /**
    * TODO(P1): Add implementation
@@ -103,7 +103,7 @@ class BufferPoolManagerInstance : public BufferPoolManager {
    * @param is_dirty true if the page should be marked as dirty, false otherwise
    * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
    */
-  auto UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool override;
+  auto UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool;
 
   /**
    * TODO(P1): Add implementation
@@ -116,14 +116,14 @@ class BufferPoolManagerInstance : public BufferPoolManager {
    * @param page_id id of page to be flushed, cannot be INVALID_PAGE_ID
    * @return false if the page could not be found in the page table, true otherwise
    */
-  auto FlushPgImp(page_id_t page_id) -> bool override;
+  auto FlushPgImp(page_id_t page_id) -> bool;
 
   /**
    * TODO(P1): Add implementation
    *
    * @brief Flush all the pages in the buffer pool to disk.
    */
-  void FlushAllPgsImp() override;
+  void FlushAllPgsImp();
 
   /**
    * TODO(P1): Add implementation
@@ -138,7 +138,7 @@ class BufferPoolManagerInstance : public BufferPoolManager {
    * @param page_id id of page to be deleted
    * @return false if the page exists but could not be deleted, true if the page didn't exist or deletion succeeded
    */
-  auto DeletePgImp(page_id_t page_id) -> bool override;
+  auto DeletePgImp(page_id_t page_id) -> bool;
 
   auto FindNewPg(frame_id_t &fid) -> Page *;
   /** Number of pages in the buffer pool. */

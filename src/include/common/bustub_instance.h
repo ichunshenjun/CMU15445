@@ -14,13 +14,17 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
+#include <shared_mutex>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "catalog/catalog.h"
 #include "common/config.h"
+#include "common/util/string_util.h"
 #include "libfort/lib/fort.hpp"
 #include "type/value.h"
 
@@ -52,6 +56,19 @@ class ResultWriter {
   virtual void EndTable() = 0;
 
   bool simplified_output_{false};
+};
+
+class NoopWriter : public ResultWriter {
+ public:
+  NoopWriter() = default;
+  void WriteCell(const std::string &cell) override {}
+  void WriteHeaderCell(const std::string &cell) override {}
+  void BeginHeader() override {}
+  void EndHeader() override {}
+  void BeginRow() override {}
+  void EndRow() override {}
+  void BeginTable(bool simplified_output) override {}
+  void EndTable() override {}
 };
 
 class SimpleStreamWriter : public ResultWriter {
@@ -196,12 +213,19 @@ class BustubInstance {
  public:
   explicit BustubInstance(const std::string &db_file_name);
 
+  BustubInstance();
+
   ~BustubInstance();
 
   /**
    * Execute a SQL query in the BusTub instance.
    */
-  void ExecuteSql(const std::string &sql, ResultWriter &writer);
+  auto ExecuteSql(const std::string &sql, ResultWriter &writer) -> bool;
+
+  /**
+   * Execute a SQL query in the BusTub instance with provided txn.
+   */
+  auto ExecuteSqlTxn(const std::string &sql, ResultWriter &writer, Transaction *txn) -> bool;
 
   /**
    * FOR TEST ONLY. Generate test tables in this BusTub instance.
@@ -223,17 +247,31 @@ class BustubInstance {
   DiskManager *disk_manager_;
   BufferPoolManager *buffer_pool_manager_;
   LockManager *lock_manager_;
-  TransactionManager *transaction_manager_;
+  TransactionManager *txn_manager_;
   LogManager *log_manager_;
   CheckpointManager *checkpoint_manager_;
   Catalog *catalog_;
   ExecutionEngine *execution_engine_;
+  std::shared_mutex catalog_lock_;
+
+  auto GetSessionVariable(const std::string &key) -> std::string {
+    if (session_variables_.find(key) != session_variables_.end()) {
+      return session_variables_[key];
+    }
+    return "";
+  }
+
+  auto IsForceStarterRule() -> bool {
+    auto variable = StringUtil::Lower(GetSessionVariable("force_optimizer_starter_rule"));
+    return variable == "1" || variable == "true" || variable == "yes";
+  }
 
  private:
   void CmdDisplayTables(ResultWriter &writer);
   void CmdDisplayIndices(ResultWriter &writer);
   void CmdDisplayHelp(ResultWriter &writer);
   void WriteOneCell(const std::string &cell, ResultWriter &writer);
+  std::unordered_map<std::string, std::string> session_variables_;
 };
 
 }  // namespace bustub

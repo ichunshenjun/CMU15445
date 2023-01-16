@@ -25,10 +25,7 @@ namespace bustub {
 /**
  * The InsertPlanNode identifies a table into which tuples are inserted.
  *
- * The values to be inserted are either embedded into the InsertPlanNode
- * itself, i.e. a "raw insert", or will come from the child of the node.
- *
- * NOTE: To simplify the assignment, InsertPlanNode has at most one child.
+ * The values to be inserted will come from the child of the node.
  */
 class InsertPlanNode : public AbstractPlanNode {
  public:
@@ -54,12 +51,11 @@ class InsertPlanNode : public AbstractPlanNode {
 
   BUSTUB_PLAN_NODE_CLONE_WITH_CHILDREN(InsertPlanNode);
 
- protected:
-  auto PlanNodeToString() const -> std::string override { return fmt::format("Insert {{ table_oid={} }}", table_oid_); }
-
- private:
   /** The table to be inserted into. */
   table_oid_t table_oid_;
+
+ protected:
+  auto PlanNodeToString() const -> std::string override { return fmt::format("Insert {{ table_oid={} }}", table_oid_); }
 };
 
 }  // namespace bustub

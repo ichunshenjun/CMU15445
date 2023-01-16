@@ -685,4 +685,3 @@ TEST(ExtendibleHashTableTest, IntegratedTest) {
 }
 
 }  // namespace bustub
-

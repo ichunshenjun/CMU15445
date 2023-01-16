@@ -683,4 +683,5 @@ TEST(ExtendibleHashTableTest, IntegratedTest) {
     ASSERT_FALSE(table->Remove(i));
   }
 }
+
 }  // namespace bustub

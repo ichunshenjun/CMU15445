@@ -48,18 +48,15 @@ class SimpleAggregationHashTable {
     for (const auto &agg_type : agg_types_) {
       switch (agg_type) {
         case AggregationType::CountStarAggregate:
-        case AggregationType::CountAggregate:
-        case AggregationType::SumAggregate:
-          // Count/Sum starts at zero.
+          // Count start starts at zero.
           values.emplace_back(ValueFactory::GetIntegerValue(0));
           break;
+        case AggregationType::CountAggregate:
+        case AggregationType::SumAggregate:
         case AggregationType::MinAggregate:
-          // Min starts at INT_MAX.
-          values.emplace_back(ValueFactory::GetIntegerValue(BUSTUB_INT32_MAX));
-          break;
         case AggregationType::MaxAggregate:
-          // Max starts at INT_MIN.
-          values.emplace_back(ValueFactory::GetIntegerValue(BUSTUB_INT32_MIN));
+          // Others starts at null.
+          values.emplace_back(ValueFactory::GetNullValueByType(TypeId::INTEGER));
           break;
       }
     }
@@ -67,6 +64,8 @@ class SimpleAggregationHashTable {
   }
 
   /**
+   * TODO(Student)
+   *
    * Combines the input into the aggregation result.
    * @param[out] result The output aggregate value
    * @param input The input value
@@ -95,6 +94,11 @@ class SimpleAggregationHashTable {
     }
     CombineAggregateValues(&ht_[agg_key], agg_val);
   }
+
+  /**
+   * Clear the hash table
+   */
+  void Clear() { ht_.clear(); }
 
   /** An iterator over the aggregation hash table */
   class Iterator {
@@ -160,8 +164,8 @@ class AggregationExecutor : public AbstractExecutor {
 
   /**
    * Yield the next tuple from the insert.
-   * @param[out] tuple The next tuple produced by the insert
-   * @param[out] rid The next tuple RID produced by the insert
+   * @param[out] tuple The next tuple produced by the aggregation
+   * @param[out] rid The next tuple RID produced by the aggregation
    * @return `true` if a tuple was produced, `false` if there are no more tuples
    */
   auto Next(Tuple *tuple, RID *rid) -> bool override;

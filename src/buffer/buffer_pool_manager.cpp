@@ -2,7 +2,7 @@
 //
 //                         BusTub
 //
-// buffer_pool_manager_instance.cpp
+// buffer_pool_manager.cpp
 //
 // Identification: src/buffer/buffer_pool_manager.cpp
 //
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "buffer/buffer_pool_manager_instance.h"
+#include "buffer/buffer_pool_manager.h"
 #include <cstddef>
 
 #include "common/config.h"
@@ -19,8 +19,8 @@
 #include "common/macros.h"
 namespace bustub {
 
-BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager, size_t replacer_k,
-                                                     LogManager *log_manager)
+BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager, size_t replacer_k,
+                                     LogManager *log_manager)
     : pool_size_(pool_size), disk_manager_(disk_manager), log_manager_(log_manager) {
   // we allocate a consecutive memory space for the buffer pool
   pages_ = new Page[pool_size_];
@@ -38,12 +38,12 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   //       "exception line in `buffer_pool_manager_instance.cpp`.");
 }
 
-BufferPoolManagerInstance::~BufferPoolManagerInstance() {
+BufferPoolManager::~BufferPoolManager() {
   delete[] pages_;
   delete page_table_;
   delete replacer_;
 }
-auto BufferPoolManagerInstance::FindNewPg(frame_id_t &fid) -> Page * {
+auto BufferPoolManager::FindNewPg(frame_id_t &fid) -> Page * {
   bool if_free_page = false;
   for (size_t i = 0; i < pool_size_; i++) {
     if (pages_[i].GetPinCount() == 0) {
@@ -74,7 +74,7 @@ auto BufferPoolManagerInstance::FindNewPg(frame_id_t &fid) -> Page * {
   }
   return nullptr;
 }
-auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
+auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   std::scoped_lock<std::mutex> lock(latch_);
   frame_id_t fid;
   Page *page = FindNewPg(fid);
@@ -94,7 +94,7 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
   return page;
 }
 
-auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
+auto BufferPoolManager::FetchPage(page_id_t page_id) -> Page * {
   std::scoped_lock<std::mutex> lock(latch_);
   if (page_id == INVALID_PAGE_ID) {
     return nullptr;
@@ -113,14 +113,14 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
     pages_[fid].page_id_ = page_id;
     replacer_->RecordAccess(fid);
     replacer_->SetEvictable(fid, false);
-    disk_manager_->ReadPage(page_id, page->data_);
+    disk_manager_->ReadPage(page_id, page->GetData());
     page_table_->Insert(page_id, fid);
     return &pages_[fid];
   }
   return nullptr;
 }
 
-auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool {
+auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) -> bool {
   std::scoped_lock<std::mutex> lock(latch_);
   frame_id_t fid;
   if (page_table_->Find(page_id, fid)) {
@@ -147,7 +147,7 @@ auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> 
   return false;
 }
 
-auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
+auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   std::scoped_lock<std::mutex> lock(latch_);
   frame_id_t fid;
   if (page_id == INVALID_PAGE_ID) {
@@ -163,7 +163,7 @@ auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
   return false;
 }
 
-void BufferPoolManagerInstance::FlushAllPgsImp() {
+void BufferPoolManager::FlushAllPages() {
   std::scoped_lock<std::mutex> lock(latch_);
   for (size_t i = 0; i < pool_size_; i++) {
     if (pages_[i].IsDirty()) {
@@ -173,7 +173,7 @@ void BufferPoolManagerInstance::FlushAllPgsImp() {
   }
 }
 
-auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
+auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
   std::scoped_lock<std::mutex> lock(latch_);
   frame_id_t fid;
   if (!page_table_->Find(page_id, fid)) {
@@ -193,6 +193,6 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
   return true;
 }
 
-auto BufferPoolManagerInstance::AllocatePage() -> page_id_t { return next_page_id_++; }
+auto BufferPoolManager::AllocatePage() -> page_id_t { return next_page_id_++; }
 
 }  // namespace bustub
