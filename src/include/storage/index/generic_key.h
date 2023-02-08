@@ -93,7 +93,7 @@ class GenericComparator {
     // equals
     return 0;
   }
-
+  GenericComparator() = default;
   GenericComparator(const GenericComparator &other) : key_schema_{other.key_schema_} {}
 
   // constructor

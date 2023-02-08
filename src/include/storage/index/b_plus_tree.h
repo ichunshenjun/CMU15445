@@ -47,10 +47,16 @@ class BPlusTree {
 
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr) -> bool;
-
+  auto InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool;
+  auto FindLeafPage(const KeyType &key, Transaction *transaction) -> Page *;
+  // auto Split(ClassType *page_data,const KeyType &key,const ValueType &value) -> ClassType*;
+  auto LeafPageSplit(LeafPage *page_data) -> LeafPage *;
+  auto InternalPageSplit(InternalPage *page_data, const KeyType &key, const page_id_t &value) -> InternalPage *;
+  template <typename ClassType>
+  void InsertIntoParent(ClassType *page_data, KeyType key, ClassType *new_leaf_page_data);
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *transaction = nullptr);
-
+  void DeleteKey(BPlusTreePage* page_data,const KeyType &key, Transaction *transaction);
   // return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction = nullptr) -> bool;
 

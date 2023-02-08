@@ -37,10 +37,16 @@ class BPlusTreeInternalPage : public BPlusTreePage {
  public:
   // must call initialize method after "create" a new node
   void Init(page_id_t page_id, page_id_t parent_id = INVALID_PAGE_ID, int max_size = INTERNAL_PAGE_SIZE);
-
   auto KeyAt(int index) const -> KeyType;
   void SetKeyAt(int index, const KeyType &key);
   auto ValueAt(int index) const -> ValueType;
+  void SetValueAt(int index, const ValueType &value);
+  auto FindKey(const KeyType &key, KeyComparator comparator) -> ValueType;
+  auto Insert(KeyType key, ValueType value, KeyComparator comparator) -> bool;
+  void Remove(const KeyType &key,KeyComparator comparator);
+  auto ValueIndex(const ValueType &value)-> int;
+  auto GetLeftPage(const ValueType &value)->ValueType;
+  auto GetRightPage(const ValueType &value)->ValueType;
 
  private:
   // Flexible array member for page data.
