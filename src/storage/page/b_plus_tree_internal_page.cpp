@@ -12,6 +12,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "buffer/buffer_pool_manager.h"
 #include "common/config.h"
 #include "common/exception.h"
 #include "storage/page/b_plus_tree_internal_page.h"
@@ -68,7 +69,23 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindKey(const KeyType &key, KeyComparator c
   }
   return ValueAt(left);
 }
-
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Move(BPlusTreeInternalPage *page_data, BufferPoolManager *buffer_pool_manager) {
+  int maxsize = GetMaxSize();
+  int minsize = GetMinSize();
+  //after insert internalpage have maxsize+1 size then spilt
+  for (auto i = minsize; i <= maxsize; i++) {
+    SetKeyAt(i - minsize, page_data->KeyAt(i));
+    SetValueAt(i - minsize, page_data->ValueAt(i));
+    auto child_page_id = page_data->ValueAt(i);
+    auto child_page = buffer_pool_manager->FetchPage(child_page_id);
+    auto child_page_data = reinterpret_cast<BPlusTreeInternalPage *>(child_page->GetData());
+    child_page_data->SetParentPageId(GetPageId());
+    buffer_pool_manager->UnpinPage(child_page_id, true);
+  }
+  IncreaseSize(maxsize - minsize+1);
+  page_data->IncreaseSize(minsize - maxsize-1);
+}
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyComparator comparator) -> bool {
   if (comparator(key, KeyAt(1)) < 0) {
@@ -97,15 +114,14 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyCom
     return false;
   }
   if (comparator(key, KeyAt(left)) > 0) {
-    for (int i = left + 1; i < GetSize(); i++) {
+    for (int i = GetSize() - 1; i >= left + 1; i--) {
       SetKeyAt(i + 1, KeyAt(i));
       SetValueAt(i + 1, ValueAt(i));
     }
     SetKeyAt(left + 1, key);
     SetValueAt(left + 1, value);
-  }
-  if (comparator(key, KeyAt(left)) < 0) {
-    for (int i = left; i < GetSize(); i++) {
+  } else if (comparator(key, KeyAt(left)) < 0) {
+    for (int i = GetSize() - 1; i >= left; i--) {
       SetKeyAt(i + 1, KeyAt(i));
       SetValueAt(i + 1, ValueAt(i));
     }
@@ -116,28 +132,28 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyCom
   return true;
 }
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value)-> int{
-  for(int i=0;i<GetSize();i++){
-    if(array_[i].second==value){
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) -> int {
+  for (int i = 0; i < GetSize(); i++) {
+    if (array_[i].second == value) {
       return i;
     }
   }
   return -1;
 }
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(const KeyType &key,KeyComparator comparator){
-  int left=1;
-  int right=GetSize()-1;
-   while (left <= right) {
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(const KeyType &key, KeyComparator comparator) {
+  int left = 1;
+  int right = GetSize() - 1;
+  while (left <= right) {
     int mid = (left + right) / 2;
     if (comparator(key, KeyAt(mid)) < 0) {
       right = mid - 1;
     } else if (comparator(key, KeyAt(mid)) > 0) {
       left = mid + 1;
     } else {
-      for(int i=mid;i<GetSize()-1;i++){
-        SetKeyAt(i,KeyAt(i+1));
-        SetValueAt(i,ValueAt(i+1));
+      for (int i = mid; i < GetSize() - 1; i++) {
+        SetKeyAt(i, KeyAt(i + 1));
+        SetValueAt(i, ValueAt(i + 1));
       }
       IncreaseSize(-1);
       return;
@@ -145,20 +161,38 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(const KeyType &key,KeyComparator com
   }
 }
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetLeftPage(const ValueType &value)->ValueType{
-  int index=ValueIndex(value);
-  if(index==0){
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetLeftPage(const ValueType &value) -> ValueType {
+  int index = ValueIndex(value);
+  if (index == 0) {
     return INVALID_PAGE_ID;
   }
-  return array_[index-1].second;
+  return array_[index - 1].second;
 }
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetRightPage(const ValueType &value)->ValueType{
-  int index=ValueIndex(value);
-  if(index==GetSize()-1){
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetRightPage(const ValueType &value) -> ValueType {
+  int index = ValueIndex(value);
+  if (index == GetSize() - 1) {
     return INVALID_PAGE_ID;
   }
-  return array_[index+1].second;
+  return array_[index + 1].second;
+}
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::AppendFirst(KeyType key, ValueType value) {
+  for (int i = GetSize() - 1; i >= 0; i--) {
+    SetKeyAt(i + 1, KeyAt(i));
+    SetValueAt(i + 1, ValueAt(i));
+  }
+  SetKeyAt(0, key);
+  SetValueAt(0, value);
+  IncreaseSize(1);
+}
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopFirst() {
+  for (int i = 1; i <= GetSize() - 1; i++) {
+    SetKeyAt(i - 1, KeyAt(i));
+    SetValueAt(i - 1, ValueAt(i));
+  }
+  IncreaseSize(-1);
 }
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;

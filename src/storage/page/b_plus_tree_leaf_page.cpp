@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <sstream>
+#include <utility>
 
 #include "common/exception.h"
 #include "common/rid.h"
@@ -134,15 +135,14 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyCompara
     return false;
   }
   if (comparator(key, KeyAt(left)) > 0) {
-    for (int i = left + 1; i < GetSize(); i++) {
+    for (int i = GetSize() - 1; i >= left + 1; i--) {
       SetKeyAt(i + 1, KeyAt(i));
       SetValueAt(i + 1, ValueAt(i));
     }
     SetKeyAt(left + 1, key);
     SetValueAt(left + 1, value);
-  }
-  if (comparator(key, KeyAt(left)) < 0) {
-    for (int i = left; i < GetSize(); i++) {
+  } else if (comparator(key, KeyAt(left)) < 0) {
+    for (int i = GetSize() - 1; i >= left; i--) {
       SetKeyAt(i + 1, KeyAt(i));
       SetValueAt(i + 1, ValueAt(i));
     }
@@ -153,25 +153,54 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyCompara
   return true;
 }
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_LEAF_PAGE_TYPE::Remove(const KeyType &key,KeyComparator comparator){
-  int left=0;
-  int right=GetSize()-1;
-  while (left<=right){
-    int mid=(left+right)/2;
-    if(comparator(key,KeyAt(mid))<0){
-      right=mid-1;
-    }else if(comparator(key,KeyAt(mid))>0){
-      left=mid+1;
-    }
-    else{
-      for(int i=mid;i<GetSize()-1;i++){
-        SetKeyAt(i,KeyAt(i+1));
-        SetValueAt(i,ValueAt(i+1));
+void B_PLUS_TREE_LEAF_PAGE_TYPE::Remove(const KeyType &key, KeyComparator comparator) {
+  int left = 0;
+  int right = GetSize() - 1;
+  while (left <= right) {
+    int mid = (left + right) / 2;
+    if (comparator(key, KeyAt(mid)) < 0) {
+      right = mid - 1;
+    } else if (comparator(key, KeyAt(mid)) > 0) {
+      left = mid + 1;
+    } else {
+      for (int i = mid; i < GetSize() - 1; i++) {
+        SetKeyAt(i, KeyAt(i + 1));
+        SetValueAt(i, ValueAt(i + 1));
       }
       IncreaseSize(-1);
       return;
     }
   }
+}
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::AppendFirst(KeyType key, ValueType value) {
+  for (int i = GetSize() - 1; i >= 0; i--) {
+    SetKeyAt(i + 1, KeyAt(i));
+    SetValueAt(i + 1, ValueAt(i));
+  }
+  SetKeyAt(0, key);
+  SetValueAt(0, value);
+  IncreaseSize(1);
+}
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index)->const MappingType &{
+  return array_[index];
+}
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key,KeyComparator comparator)->int{
+  int left = 0;
+  int right = GetSize() - 1;
+  while (left <= right) {
+    int mid = (left + right) / 2;
+    if (comparator(key, KeyAt(mid)) < 0) {
+      right = mid - 1;
+    } else if (comparator(key, KeyAt(mid)) > 0) {
+      left = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+  return -1;
 }
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;

@@ -56,7 +56,10 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   void Move(BPlusTreeLeafPage *page_data);
   auto Insert(KeyType key, ValueType value, KeyComparator comparator) -> bool;
   auto ReturnValue(const KeyType &key, ValueType *value, KeyComparator comparator) -> bool;
-  void Remove(const KeyType &key,KeyComparator comparator);
+  void Remove(const KeyType &key, KeyComparator comparator);
+  void AppendFirst(KeyType key, ValueType value);
+  auto GetItem(int index) -> const MappingType &;
+  auto KeyIndex(const KeyType &key,KeyComparator comparator)->int;
  private:
   page_id_t next_page_id_;
   // Flexible array member for page data.

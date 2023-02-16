@@ -42,11 +42,14 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto ValueAt(int index) const -> ValueType;
   void SetValueAt(int index, const ValueType &value);
   auto FindKey(const KeyType &key, KeyComparator comparator) -> ValueType;
+  void Move(BPlusTreeInternalPage *page_data, BufferPoolManager *buffer_pool_manager);
   auto Insert(KeyType key, ValueType value, KeyComparator comparator) -> bool;
-  void Remove(const KeyType &key,KeyComparator comparator);
-  auto ValueIndex(const ValueType &value)-> int;
-  auto GetLeftPage(const ValueType &value)->ValueType;
-  auto GetRightPage(const ValueType &value)->ValueType;
+  void Remove(const KeyType &key, KeyComparator comparator);
+  auto ValueIndex(const ValueType &value) -> int;
+  auto GetLeftPage(const ValueType &value) -> ValueType;
+  auto GetRightPage(const ValueType &value) -> ValueType;
+  void AppendFirst(KeyType key, ValueType value);
+  void PopFirst();
 
  private:
   // Flexible array member for page data.
