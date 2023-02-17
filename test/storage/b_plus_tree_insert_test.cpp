@@ -89,7 +89,7 @@ TEST(BPlusTreeTests, InsertTest2) {
     rid.Set(static_cast<int32_t>(key >> 32), value);
     index_key.SetFromInteger(key);
     tree.Insert(index_key, rid, transaction);
-    // tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw" + std::to_string(key) + ".dot");
+    tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw" + std::to_string(key) + ".dot");
   }
   // tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw.dot");
   std::vector<RID> rids;

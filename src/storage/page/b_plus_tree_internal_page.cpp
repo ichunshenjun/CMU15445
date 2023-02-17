@@ -73,7 +73,7 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Move(BPlusTreeInternalPage *page_data, BufferPoolManager *buffer_pool_manager) {
   int maxsize = GetMaxSize();
   int minsize = GetMinSize();
-  //after insert internalpage have maxsize+1 size then spilt
+  // after insert internalpage have maxsize+1 size then spilt
   for (auto i = minsize; i <= maxsize; i++) {
     SetKeyAt(i - minsize, page_data->KeyAt(i));
     SetValueAt(i - minsize, page_data->ValueAt(i));
@@ -83,8 +83,8 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Move(BPlusTreeInternalPage *page_data, Buff
     child_page_data->SetParentPageId(GetPageId());
     buffer_pool_manager->UnpinPage(child_page_id, true);
   }
-  IncreaseSize(maxsize - minsize+1);
-  page_data->IncreaseSize(minsize - maxsize-1);
+  IncreaseSize(maxsize - minsize + 1);
+  page_data->IncreaseSize(minsize - maxsize - 1);
 }
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyComparator comparator) -> bool {

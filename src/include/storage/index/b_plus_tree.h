@@ -14,11 +14,12 @@
 #include <string>
 #include <vector>
 
+#include "common/config.h"
+#include "common/rwlatch.h"
 #include "concurrency/transaction.h"
 #include "storage/index/index_iterator.h"
 #include "storage/page/b_plus_tree_internal_page.h"
 #include "storage/page/b_plus_tree_leaf_page.h"
-
 namespace bustub {
 
 #define BPLUSTREE_TYPE BPlusTree<KeyType, ValueType, KeyComparator>
@@ -48,12 +49,14 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr) -> bool;
   auto InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool;
-  auto FindLeafPage(const KeyType &key, Transaction *transaction) -> Page *;
+  auto FindLeafPage(const KeyType &key, OpType op, Transaction *transaction) -> Page *;
+  auto CrabingProtocalFetchPage(page_id_t page_id, OpType op, page_id_t previous, Transaction *transaction) -> Page *;
+  void FreePagesInTransaction(bool exclusive, Transaction *transaction, page_id_t previous);
   // auto Split(ClassType *page_data,const KeyType &key,const ValueType &value) -> ClassType*;
   template <typename ClassType>
-  auto Split(ClassType *page_data) -> ClassType *;
+  auto Split(ClassType *page_data, Transaction *transaction) -> ClassType *;
   template <typename ClassType>
-  void InsertIntoParent(ClassType *page_data, KeyType key, ClassType *new_leaf_page_data);
+  void InsertIntoParent(ClassType *page_data, KeyType key, ClassType *new_leaf_page_data, Transaction *transaction);
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *transaction = nullptr);
   void DeleteKey(BPlusTreePage *page_data, const KeyType &key, Transaction *transaction);
@@ -90,6 +93,48 @@ class BPlusTree {
 
   void ToString(BPlusTreePage *page, BufferPoolManager *bpm) const;
 
+  inline void Lock(bool exclusive, Page *page) {
+    if (exclusive) {
+      page->WLatch();
+    } else {
+      page->RLatch();
+    }
+  }
+
+  inline void Unlock(bool exclusive, Page *page) {
+    if (exclusive) {
+      page->WUnlatch();
+    } else {
+      page->RUnlatch();
+    }
+  }
+
+  inline void Unlock(bool exclusive, page_id_t page_id) {
+    auto page = buffer_pool_manager_->FetchPage(page_id);
+    Unlock(exclusive, page);
+    buffer_pool_manager_->UnpinPage(page_id, exclusive);
+  }
+
+  inline void LockRootPageId(bool exclusive) {
+    if (exclusive) {
+      mutex_.WLock();
+    } else {
+      mutex_.RLock();
+    }
+    root_locked_cnt++;
+  }
+
+  inline void TryUnlockRootPageId(bool exclusive) {
+    if (root_locked_cnt > 0) {
+      if (exclusive) {
+        mutex_.WUnlock();
+      } else {
+        mutex_.RUnlock();
+      }
+      root_locked_cnt--;
+    }
+  }
+
   // member variable
   std::string index_name_;
   page_id_t root_page_id_;
@@ -97,6 +142,8 @@ class BPlusTree {
   KeyComparator comparator_;
   int leaf_max_size_;
   int internal_max_size_;
+  ReaderWriterLatch mutex_;
+  static thread_local int root_locked_cnt;
 };
 
 }  // namespace bustub

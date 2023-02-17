@@ -183,11 +183,9 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::AppendFirst(KeyType key, ValueType value) {
   IncreaseSize(1);
 }
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index)->const MappingType &{
-  return array_[index];
-}
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index) -> const MappingType & { return array_[index]; }
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key,KeyComparator comparator)->int{
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, KeyComparator comparator) -> int {
   int left = 0;
   int right = GetSize() - 1;
   while (left <= right) {

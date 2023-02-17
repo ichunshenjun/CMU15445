@@ -63,7 +63,8 @@ class BPlusTreePage {
   void SetPageId(page_id_t page_id);
 
   void SetLSN(lsn_t lsn = INVALID_LSN);
-  auto IsSafe(OpType op)->bool;
+  auto IsSafe(OpType op) -> bool;
+
  private:
   // member variable, attributes that both internal and leaf page share
   IndexPageType page_type_ __attribute__((__unused__));

@@ -40,11 +40,11 @@ void BPlusTreePage::SetMaxSize(int size) { max_size_ = size; }
  * Helper method to get min page size
  * Generally, min page size == max page size / 2
  */
-auto BPlusTreePage::GetMinSize() const -> int { 
-    if(IsLeafPage()){
-        return max_size_ / 2; 
-    }
-    return (max_size_-1)/2+1;
+auto BPlusTreePage::GetMinSize() const -> int {
+  if (IsLeafPage()) {
+    return max_size_ / 2;
+  }
+  return (max_size_ - 1) / 2 + 1;
 }
 
 /*
@@ -66,18 +66,18 @@ void BPlusTreePage::SetLSN(lsn_t lsn) { lsn_ = lsn; }
 /*
  * Helper methods to get safe
  */
-auto BPlusTreePage::IsSafe(OpType op)->bool{
-    int size=GetSize();
-    if(op==OpType::INSERT){
-        if(IsLeafPage()){
-            return size<GetMaxSize()-1;
-        }
-        return size<GetMaxSize();
+auto BPlusTreePage::IsSafe(OpType op) -> bool {
+  int size = GetSize();
+  if (op == OpType::INSERT) {
+    if (IsLeafPage()) {
+      return size < GetMaxSize() - 1;
     }
-    if(op==OpType::DELETE){
-        return size>GetMinSize();
-    }
-    assert(false);
+    return size < GetMaxSize();
+  }
+  if (op == OpType::DELETE) {
+    return size > GetMinSize();
+  }
+  assert(false);
 }
 
 }  // namespace bustub
