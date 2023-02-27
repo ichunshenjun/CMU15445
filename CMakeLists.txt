@@ -259,6 +259,14 @@ set(P1_FILES
         "src/container/hash/extendible_hash_table.cpp"
         "src/include/buffer/lru_k_replacer.h"
         "src/buffer/lru_k_replacer.cpp"
+        "src/include/buffer/buffer_pool_manager.h"
+        "src/buffer/buffer_pool_manager.cpp"
+        )
+set(P1_SUBMISSION_FILES
+        "src/include/container/hash/extendible_hash_table.h"
+        "src/container/hash/extendible_hash_table.cpp"
+        "src/include/buffer/lru_k_replacer.h"
+        "src/buffer/lru_k_replacer.cpp"
         "src/include/buffer/buffer_pool_manager_instance.h"
         "src/buffer/buffer_pool_manager_instance.cpp"
         )
@@ -270,10 +278,23 @@ add_custom_target(check-clang-tidy-p1
         )
 add_custom_target(submit-p1
         zip project1-submission.zip
-        ${P1_FILES}
+        ${P1_SUBMISSION_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
 
+set(P2_SUBMISSION_FILES
+        "src/include/storage/page/b_plus_tree_page.h"
+        "src/storage/page/b_plus_tree_page.cpp"
+        "src/include/storage/page/b_plus_tree_internal_page.h"
+        "src/storage/page/b_plus_tree_internal_page.cpp"
+        "src/include/storage/page/b_plus_tree_leaf_page.h"
+        "src/storage/page/b_plus_tree_leaf_page.cpp"
+        "src/include/storage/index/index_iterator.h"
+        "src/storage/index/index_iterator.cpp"
+        "src/include/storage/index/b_plus_tree.h"
+        "src/storage/index/b_plus_tree.cpp"
+        ${P1_SUBMISSION_FILES}
+        )
 set(P2_FILES
         "src/include/storage/page/b_plus_tree_page.h"
         "src/storage/page/b_plus_tree_page.cpp"
@@ -295,10 +316,40 @@ add_custom_target(check-clang-tidy-p2
         )
 add_custom_target(submit-p2
         zip project2-submission.zip
-        ${P2_FILES}
+        ${P2_SUBMISSION_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
 
+set(P3_SUBMISSION_FILES
+        "src/include/execution/executors/aggregation_executor.h"
+        "src/include/execution/executors/delete_executor.h"
+        "src/include/execution/executors/filter_executor.h"
+        "src/include/execution/executors/hash_join_executor.h"
+        "src/include/execution/executors/index_scan_executor.h"
+        "src/include/execution/executors/insert_executor.h"
+        "src/include/execution/executors/limit_executor.h"
+        "src/include/execution/executors/nested_index_join_executor.h"
+        "src/include/execution/executors/nested_loop_join_executor.h"
+        "src/include/execution/executors/seq_scan_executor.h"
+        "src/include/execution/executors/sort_executor.h"
+        "src/include/execution/executors/topn_executor.h"
+        "src/execution/aggregation_executor.cpp"
+        "src/execution/delete_executor.cpp"
+        "src/execution/filter_executor.cpp"
+        "src/execution/hash_join_executor.cpp"
+        "src/execution/index_scan_executor.cpp"
+        "src/execution/insert_executor.cpp"
+        "src/execution/limit_executor.cpp"
+        "src/execution/nested_index_join_executor.cpp"
+        "src/execution/nested_loop_join_executor.cpp"
+        "src/execution/seq_scan_executor.cpp"
+        "src/execution/sort_executor.cpp"
+        "src/execution/topn_executor.cpp"
+        "src/include/optimizer/optimizer.h"
+        "src/optimizer/optimizer_custom_rules.cpp"
+        "src/optimizer/sort_limit_as_topn.cpp"
+        ${P2_SUBMISSION_FILES}
+        )
 set(P3_FILES
         "src/include/execution/executors/aggregation_executor.h"
         "src/include/execution/executors/delete_executor.h"
@@ -329,7 +380,6 @@ set(P3_FILES
         "src/optimizer/sort_limit_as_topn.cpp"
         ${P2_FILES}
         )
-
 add_custom_target(check-clang-tidy-p3
         ${BUSTUB_BUILD_SUPPORT_DIR}/run_clang_tidy.py                     # run LLVM's clang-tidy script
         -clang-tidy-binary ${CLANG_TIDY_BIN}                              # using our clang-tidy binary
@@ -338,10 +388,18 @@ add_custom_target(check-clang-tidy-p3
         )
 add_custom_target(submit-p3
         zip project3-submission.zip
-        ${P3_FILES}
+        ${P3_SUBMISSION_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
-
+set(P4_SUBMISSION_FILES
+        "src/include/concurrency/lock_manager.h"
+        "src/concurrency/lock_manager.cpp"
+        "src/include/execution/executors/update_executor.h"
+        "src/execution/update_executor.cpp"
+        "src/include/execution/plans/index_scan_plan.h"
+        "tools/terrier_bench/terrier_bench_config.h"
+        ${P3_SUBMISSION_FILES}
+        )
 set(P4_FILES
         "src/include/concurrency/lock_manager.h"
         "src/concurrency/lock_manager.cpp"
@@ -361,7 +419,7 @@ add_custom_target(check-clang-tidy-p4
 
 add_custom_target(submit-p4
         zip project4-submission.zip
-        ${P4_FILES}
+        ${P4_SUBMISSION_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
 

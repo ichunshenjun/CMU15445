@@ -36,7 +36,15 @@ auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
   index_++;
   if (index_ == leaf_->GetSize() && leaf_->GetNextPageId() != INVALID_PAGE_ID) {
     auto next_page_id = leaf_->GetNextPageId();
+    //unlock leaf
+    // buffer_pool_manager_->FetchPage(leaf_->GetPageId())->RUnlatch();
+    // buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
+    // buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
+
     auto next_page = buffer_pool_manager_->FetchPage(next_page_id);
+    //lock next leaf
+    // next_page->RLatch();
+
     leaf_ = reinterpret_cast<BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *>(next_page->GetData());
   }
   return *this;
