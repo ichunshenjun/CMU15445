@@ -99,7 +99,7 @@ auto BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, 
     return false;
   }
   bool res = leaf_page_data->Insert(key, value, comparator_);
-  if (leaf_page_data->GetSize() == leaf_page_data->GetMaxSize()) {
+  if (leaf_page_data->GetSize() >= leaf_page_data->GetMaxSize()) {
     auto new_leaf_page_data = Split(leaf_page_data, transaction);
     auto first_key = new_leaf_page_data->KeyAt(0);
     InsertIntoParent(leaf_page_data, first_key, new_leaf_page_data, transaction);
@@ -231,14 +231,13 @@ void BPLUSTREE_TYPE::InsertIntoParent(ClassType *page_data, KeyType key, ClassTy
   auto parent_page = buffer_pool_manager_->FetchPage(parent_page_id);
   auto parent_page_data = reinterpret_cast<InternalPage *>(parent_page->GetData());
   parent_page_data->Insert(key, new_leaf_page_data->GetPageId(), comparator_);
-  if (parent_page_data->GetSize() <= parent_page_data->GetMaxSize()) {
-    buffer_pool_manager_->UnpinPage(parent_page_id, true);
-    return;
+  if (parent_page_data->GetSize() > parent_page_data->GetMaxSize()) {
+    // parent_page_data->Insert(key,new_leaf_page_data->ValueAt(0),comparator_);
+    auto new_parent_page_data = Split(parent_page_data, transaction);
+    auto parent_first_key = new_parent_page_data->KeyAt(0);
+    InsertIntoParent(parent_page_data, parent_first_key, new_parent_page_data, transaction);
   }
-  // parent_page_data->Insert(key,new_leaf_page_data->ValueAt(0),comparator_);
-  auto new_parent_page_data = Split(parent_page_data, transaction);
-  auto parent_first_key = new_parent_page_data->KeyAt(0);
-  InsertIntoParent(parent_page_data, parent_first_key, new_parent_page_data, transaction);
+  buffer_pool_manager_->UnpinPage(parent_page_id, true);
 }
 /*****************************************************************************
  * REMOVE
@@ -475,6 +474,9 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
+  if (root_page_id_ == INVALID_PAGE_ID) {
+    return INDEXITERATOR_TYPE();
+  }
   KeyType useless;
   auto find_page_data=FindLeafPage(useless, OpType::READ,nullptr,true);
   TryUnlockRootPageId(false);
@@ -488,6 +490,9 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
+  if (root_page_id_ == INVALID_PAGE_ID) {
+    return INDEXITERATOR_TYPE();
+  }
   auto leaf_page = FindLeafPage(key, OpType::READ, nullptr);
   TryUnlockRootPageId(false);
   auto leaf_page_data = reinterpret_cast<LeafPage *>(leaf_page->GetData());
