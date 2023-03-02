@@ -14,9 +14,12 @@
 
 #include <vector>
 
+#include "catalog/catalog.h"
+#include "common/rid.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/seq_scan_plan.h"
+#include "storage/table/table_iterator.h"
 #include "storage/table/tuple.h"
 
 namespace bustub {
@@ -50,5 +53,7 @@ class SeqScanExecutor : public AbstractExecutor {
  private:
   /** The sequential scan plan node to be executed */
   const SeqScanPlanNode *plan_;
+  TableIterator table_iter_={nullptr,RID(),nullptr};
+  TableInfo *table_info_;
 };
 }  // namespace bustub
