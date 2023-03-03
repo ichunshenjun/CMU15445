@@ -1,7 +1,0 @@
-digraph G {
-LEAF_1[shape=plain color=green label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
-<TR><TD COLSPAN="1">P=1</TD></TR>
-<TR><TD COLSPAN="1">max_size=2,min_size=1,size=1</TD></TR>
-<TR><TD>1</TD>
-</TR></TABLE>>];
-}

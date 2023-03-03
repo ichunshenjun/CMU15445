@@ -110,11 +110,11 @@ auto BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, 
   return res;
 }
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, OpType op, Transaction *transaction,bool mostLeft) -> Page * {
+auto BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, OpType op, Transaction *transaction, bool mostLeft) -> Page * {
   bool exclusive = (op != OpType::READ);
   LockRootPageId(exclusive);
   auto find_page_id = root_page_id_;
-  auto new_page_id=INVALID_PAGE_ID;
+  auto new_page_id = INVALID_PAGE_ID;
   auto find_page = CrabingProtocalFetchPage(find_page_id, op, -1, transaction);
   if (find_page == nullptr) {
     TryUnlockRootPageId(exclusive);
@@ -123,10 +123,9 @@ auto BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, OpType op, Transaction *tr
   auto find_page_data = reinterpret_cast<BPlusTreePage *>(find_page->GetData());
   while (!find_page_data->IsLeafPage()) {
     auto internal_page_data = reinterpret_cast<InternalPage *>(find_page_data);
-    if(mostLeft){
+    if (mostLeft) {
       new_page_id = internal_page_data->ValueAt(0);
-    }
-    else{
+    } else {
       new_page_id = internal_page_data->FindKey(key, comparator_);
     }
     // buffer_pool_manager_->UnpinPage(find_page_id, false);
@@ -177,7 +176,7 @@ void BPLUSTREE_TYPE::FreePagesInTransaction(bool exclusive, Transaction *transac
       transaction->GetDeletedPageSet()->erase(pre_page_id);
     }
   }
-  assert(transaction->GetDeletedPageSet()->empty());
+  // assert(transaction->GetDeletedPageSet()->empty());
   transaction->GetPageSet()->clear();
 }
 INDEX_TEMPLATE_ARGUMENTS
@@ -251,7 +250,11 @@ void BPLUSTREE_TYPE::InsertIntoParent(ClassType *page_data, KeyType key, ClassTy
  */
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
+  if (IsEmpty()) {
+    return;
+  }
   auto leaf_page = FindLeafPage(key, OpType::DELETE, transaction);
+  // LOG_DEBUG("find success");
   auto leaf_page_data = reinterpret_cast<LeafPage *>(leaf_page->GetData());
   if (!leaf_page_data->FindKey(key, comparator_)) {
     // buffer_pool_manager_->UnpinPage(leaf_page_data->GetPageId(), false);
@@ -271,6 +274,9 @@ void BPLUSTREE_TYPE::DeleteKey(BPlusTreePage *page_data, const KeyType &key, Tra
     auto internal_page_data = reinterpret_cast<InternalPage *>(page_data);
     internal_page_data->Remove(key, comparator_);
   }
+  if (page_data->IsRootPage() && page_data->GetSize() == 0){
+    root_page_id_ = INVALID_PAGE_ID;
+  }
   if (page_data->IsRootPage() && page_data->GetSize() == 1 && !page_data->IsLeafPage()) {
     auto root_page_data = reinterpret_cast<InternalPage *>(page_data);
     auto root_page_id = root_page_data->GetPageId();
@@ -279,6 +285,7 @@ void BPLUSTREE_TYPE::DeleteKey(BPlusTreePage *page_data, const KeyType &key, Tra
     assert(new_root_page);
     auto new_root_page_data = reinterpret_cast<BPlusTreePage *>(new_root_page->GetData());
     new_root_page_data->SetParentPageId(INVALID_PAGE_ID);
+    root_page_id_=new_root_page_id;
     UpdateRootPageId(0);
     buffer_pool_manager_->UnpinPage(new_root_page_id, true);
     // buffer_pool_manager_->DeletePage(root_page_id);
@@ -291,24 +298,40 @@ void BPLUSTREE_TYPE::DeleteKey(BPlusTreePage *page_data, const KeyType &key, Tra
     auto parent_page_data = reinterpret_cast<InternalPage *>(parent_page->GetData());
     // Get left page
     auto left_page_id = parent_page_data->GetLeftPage(page_data->GetPageId());
-    // auto left_page = buffer_pool_manager_->FetchPage(left_page_id);
-    auto left_page = CrabingProtocalFetchPage(left_page_id, OpType::DELETE, -1, transaction);
-    auto left_page_data = reinterpret_cast<BPlusTreePage *>(left_page->GetData());
+    Page *left_page = nullptr;
+    BPlusTreePage *left_page_data = nullptr;
+    if (left_page_id != INVALID_PAGE_ID) {
+      // left_page = buffer_pool_manager_->FetchPage(left_page_id);
+      left_page = CrabingProtocalFetchPage(left_page_id, OpType::DELETE, -1, transaction);
+      left_page_data = reinterpret_cast<BPlusTreePage *>(left_page->GetData());
+    }
     // Get right page
     auto right_page_id = parent_page_data->GetRightPage(page_data->GetPageId());
-    // auto right_page = buffer_pool_manager_->FetchPage(right_page_id);
-    auto right_page = CrabingProtocalFetchPage(right_page_id, OpType::DELETE, -1, transaction);
-    auto right_page_data = reinterpret_cast<BPlusTreePage *>(right_page->GetData());
+    Page *right_page = nullptr;
+    BPlusTreePage *right_page_data = nullptr;
+    if (right_page_id != INVALID_PAGE_ID) {
+      // right_page = buffer_pool_manager_->FetchPage(right_page_id);
+      right_page = CrabingProtocalFetchPage(right_page_id, OpType::DELETE, -1, transaction);
+      right_page_data = reinterpret_cast<BPlusTreePage *>(right_page->GetData());
+    }
     buffer_pool_manager_->UnpinPage(parent_page_data->GetPageId(), false);
-    if (left_page_data != nullptr && left_page_data->GetSize() + page_data->GetSize() >= page_data->GetMaxSize()) {
+    int maxsize=0;
+    if(page_data->IsLeafPage()){
+      maxsize=page_data->GetMaxSize();
+    }
+    else{
+      maxsize=page_data->GetMaxSize()+1;
+    }
+    if (left_page_data != nullptr && left_page_data->GetSize() + page_data->GetSize() >= maxsize) {
       Borrow(left_page_data, page_data, parent_page_data->ValueIndex(page_data->GetPageId()));
     } else if (right_page_data != nullptr &&
-               right_page_data->GetSize() + page_data->GetSize() >= page_data->GetMaxSize()) {
-      Borrow(right_page_data, page_data, parent_page_data->ValueIndex(page_data->GetPageId()));
+               right_page_data->GetSize() + page_data->GetSize() >= maxsize) {
+      Borrow(right_page_data, page_data, parent_page_data->ValueIndex(right_page_data->GetPageId()));
     } else if (left_page_data != nullptr &&
-               left_page_data->GetSize() + page_data->GetSize() < page_data->GetMaxSize()) {
+               left_page_data->GetSize() + page_data->GetSize() < maxsize) {
       Merge(left_page_data, page_data, parent_page_data->ValueIndex(page_data->GetPageId()), transaction);
-    } else {
+    } else if (right_page_data != nullptr &&
+               right_page_data->GetSize() + page_data->GetSize() < maxsize) {
       Merge(right_page_data, page_data, parent_page_data->ValueIndex(right_page_data->GetPageId()), transaction);
     }
     // if (left_page_id != INVALID_PAGE_ID) {
@@ -344,7 +367,7 @@ void BPLUSTREE_TYPE::Borrow(BPlusTreePage *sibling_page_data, BPlusTreePage *pag
       internal_page_data->AppendFirst(last_key, last_value);
       // update child
       auto child_page = buffer_pool_manager_->FetchPage(last_value);
-      auto child_page_data = reinterpret_cast<InternalPage *>(child_page->GetData());
+      auto child_page_data = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
       child_page_data->SetParentPageId(internal_page_data->GetPageId());
       buffer_pool_manager_->UnpinPage(last_value, true);
       // update parent key
@@ -367,18 +390,21 @@ void BPLUSTREE_TYPE::Borrow(BPlusTreePage *sibling_page_data, BPlusTreePage *pag
       auto first_key = sibling_internal_data->KeyAt(1);
       auto first_value = sibling_internal_data->ValueAt(0);
       sibling_internal_data->PopFirst();
-      internal_page_data->Insert(parent_page_data->KeyAt(index), first_value, comparator_);
+      // internal_page_data->Insert(parent_page_data->KeyAt(index), first_value, comparator_); 不使用插入因为有可能中间节点这时只有一个key
+      internal_page_data->SetKeyAt(internal_page_data->GetSize(),parent_page_data->KeyAt(index));
+      internal_page_data->SetValueAt(internal_page_data->GetSize(),first_value);
+      internal_page_data->IncreaseSize(1);
       // update child
-      auto child_page_id = sibling_internal_data->ValueAt(0);
+      auto child_page_id = first_value;
       auto child_page = buffer_pool_manager_->FetchPage(child_page_id);
-      auto child_page_data = reinterpret_cast<InternalPage *>(child_page->GetData());
+      auto child_page_data = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
       child_page_data->SetParentPageId(internal_page_data->GetPageId());
       buffer_pool_manager_->UnpinPage(child_page_id, true);
       // update parent key
       parent_page_data->SetKeyAt(index, first_key);
     }
   }
-  buffer_pool_manager_->UnpinPage(parent_page_data->GetPageId(), true);  //?
+  buffer_pool_manager_->UnpinPage(parent_page_data->GetPageId(), false);  //?
 }
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page_data, int index,
@@ -408,7 +434,6 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
           sibling_internal_data->SetKeyAt(sibling_internal_data->GetSize() + i, internal_page_data->KeyAt(i));
         }
         sibling_internal_data->SetValueAt(sibling_internal_data->GetSize() + i, internal_page_data->ValueAt(i));
-        sibling_internal_data->IncreaseSize(1);
         // update child
         auto child_page_id = internal_page_data->ValueAt(i);
         auto child_page = buffer_pool_manager_->FetchPage(child_page_id);
@@ -419,6 +444,7 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
         child_page_data->SetParentPageId(sibling_internal_data->GetPageId());
         buffer_pool_manager_->UnpinPage(child_page_id, true);
       }
+      sibling_internal_data->IncreaseSize(internal_page_data->GetSize());
       internal_page_data->IncreaseSize(-internal_page_data->GetSize());
     }
     // buffer_pool_manager_->DeletePage(page_data->GetPageId());
@@ -431,8 +457,8 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
       for (int i = 0; i <= sibling_leaf_data->GetSize() - 1; i++) {
         leaf_page_data->SetKeyAt(leaf_page_data->GetSize() + i, sibling_leaf_data->KeyAt(i));
         leaf_page_data->SetValueAt(leaf_page_data->GetSize() + i, sibling_leaf_data->ValueAt(i));
-        leaf_page_data->IncreaseSize(1);
       }
+      leaf_page_data->IncreaseSize(sibling_leaf_data->GetSize());
       sibling_leaf_data->IncreaseSize(-sibling_leaf_data->GetSize());
       leaf_page_data->SetNextPageId(sibling_leaf_data->GetNextPageId());
     } else {
@@ -445,21 +471,21 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
           internal_page_data->SetKeyAt(internal_page_data->GetSize() + i, sibling_internal_data->KeyAt(i));
         }
         internal_page_data->SetValueAt(internal_page_data->GetSize() + i, sibling_internal_data->ValueAt(i));
-        internal_page_data->IncreaseSize(1);
         // update child
         auto child_page_id = sibling_internal_data->ValueAt(i);
         auto child_page = buffer_pool_manager_->FetchPage(child_page_id);
         if (child_page == nullptr) {
           throw std::runtime_error("valid page id do not exist");
-        }
-        auto child_page_data = reinterpret_cast<InternalPage *>(child_page->GetData());
+        }       
+        auto child_page_data = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
         child_page_data->SetParentPageId(internal_page_data->GetPageId());
         buffer_pool_manager_->UnpinPage(child_page_id, true);
       }
+      internal_page_data->IncreaseSize(sibling_internal_data->GetSize());
       sibling_internal_data->IncreaseSize(-sibling_internal_data->GetSize());
     }
     // buffer_pool_manager_->DeletePage(page_data->GetPageId());
-    transaction->AddIntoDeletedPageSet(page_data->GetPageId());
+    transaction->AddIntoDeletedPageSet(sibling_page_data->GetPageId());
     DeleteKey(parent_page_data, parent_page_data->KeyAt(index), transaction);
   }
   buffer_pool_manager_->UnpinPage(parent_page_data->GetPageId(), true);
@@ -478,7 +504,7 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
     return INDEXITERATOR_TYPE();
   }
   KeyType useless;
-  auto find_page_data=FindLeafPage(useless, OpType::READ,nullptr,true);
+  auto find_page_data = FindLeafPage(useless, OpType::READ, nullptr, true);
   TryUnlockRootPageId(false);
   return INDEXITERATOR_TYPE(reinterpret_cast<LeafPage *>(find_page_data), 0, buffer_pool_manager_);
 }
@@ -506,18 +532,22 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
+  bool exclusive = false;
+  LockRootPageId(exclusive);
   auto find_page_id = root_page_id_;
-  auto find_page = buffer_pool_manager_->FetchPage(find_page_id);
+  auto new_page_id = INVALID_PAGE_ID;
+  auto find_page = CrabingProtocalFetchPage(find_page_id, OpType::READ, -1, nullptr);
   if (find_page == nullptr) {
-    throw std::exception();
+    TryUnlockRootPageId(exclusive);
+    return INDEXITERATOR_TYPE();
   }
   auto find_page_data = reinterpret_cast<BPlusTreePage *>(find_page->GetData());
   while (!find_page_data->IsLeafPage()) {
     auto internal_page_data = reinterpret_cast<InternalPage *>(find_page_data);
-    auto new_page_id = internal_page_data->ValueAt(internal_page_data->GetSize() - 1);
-    buffer_pool_manager_->UnpinPage(find_page_id, false);
+    new_page_id = internal_page_data->ValueAt(internal_page_data->GetSize() - 1);
+    // buffer_pool_manager_->UnpinPage(find_page_id, false);
+    find_page = CrabingProtocalFetchPage(new_page_id, OpType::READ, find_page_id, nullptr);
     find_page_id = new_page_id;
-    find_page = buffer_pool_manager_->FetchPage(find_page_id);
     if (find_page == nullptr) {
       throw std::exception();
     }

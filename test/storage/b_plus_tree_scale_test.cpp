@@ -17,6 +17,7 @@
 #include <string>
 
 #include "buffer/buffer_pool_manager.h"
+#include "common/logger.h"
 #include "concurrency/transaction.h"
 #include "gtest/gtest.h"
 #include "storage/index/b_plus_tree.h"
@@ -60,7 +61,7 @@ TEST(BPlusTreeTests, InsertTest1) {
     rid.Set(static_cast<int32_t>(key >> 32), value);
     index_key.SetFromInteger(key);
     tree.Insert(index_key, rid, transaction);
-
+    // tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw"+std::to_string(i)+".dot");
   }
   tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw.dot");
   std::vector<RID> rids;
@@ -94,7 +95,10 @@ TEST(BPlusTreeTests, InsertTest1) {
   for (auto key : keys) {
     i++;
     index_key.SetFromInteger(key);
+    //  index_key.SetFromInteger(4);
+    LOG_DEBUG("delete key=%ld", key);
     tree.Remove(index_key, transaction);
+    // tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw" + std::to_string(i) + ".dot");
   }
 
   EXPECT_EQ(true, tree.IsEmpty());
@@ -144,7 +148,6 @@ TEST(BPlusTreeTests, DISABLED_InsertTest2) {
     rid.Set(static_cast<int32_t>(key >> 32), value);
     index_key.SetFromInteger(key);
     tree.Insert(index_key, rid, transaction);
-
   }
   std::vector<RID> rids;
 
@@ -227,7 +230,6 @@ TEST(BPlusTreeTests, DISABLED_InsertTest3) {
     rid.Set(static_cast<int32_t>(key >> 32), value);
     index_key.SetFromInteger(key);
     tree.Insert(index_key, rid, transaction);
-
   }
   std::vector<RID> rids;
 
@@ -274,6 +276,4 @@ TEST(BPlusTreeTests, DISABLED_InsertTest3) {
   remove("test.log");
 }
 
-} // namespace bustub
-
-
+}  // namespace bustub

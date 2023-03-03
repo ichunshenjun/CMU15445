@@ -49,7 +49,7 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr) -> bool;
   auto InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool;
-  auto FindLeafPage(const KeyType &key, OpType op, Transaction *transaction=nullptr,bool mostLeft=false) -> Page *;
+  auto FindLeafPage(const KeyType &key, OpType op, Transaction *transaction = nullptr, bool mostLeft = false) -> Page *;
   auto CrabingProtocalFetchPage(page_id_t page_id, OpType op, page_id_t previous, Transaction *transaction) -> Page *;
   void FreePagesInTransaction(bool exclusive, Transaction *transaction, page_id_t previous);
   // auto Split(ClassType *page_data,const KeyType &key,const ValueType &value) -> ClassType*;

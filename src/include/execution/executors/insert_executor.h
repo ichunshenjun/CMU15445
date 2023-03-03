@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "catalog/catalog.h"
 #include "execution/executor_context.h"
