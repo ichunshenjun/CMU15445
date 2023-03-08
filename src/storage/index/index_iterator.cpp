@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "common/config.h"
+#include "common/logger.h"
 #include "storage/index/index_iterator.h"
 
 namespace bustub {
@@ -36,26 +37,34 @@ auto INDEXITERATOR_TYPE::operator*() -> const MappingType & {
 INDEX_TEMPLATE_ARGUMENTS
 auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
   // throw std::runtime_error("unimplemented");
-  index_++;
-  if (index_ == leaf_->GetSize() && leaf_->GetNextPageId() != INVALID_PAGE_ID) {
+  if (index_ == leaf_->GetSize() - 1 && leaf_->GetNextPageId() != INVALID_PAGE_ID) {
     auto next_page_id = leaf_->GetNextPageId();
     index_ = 0;
     // unlock leaf
-    buffer_pool_manager_->FetchPage(leaf_->GetPageId())->RUnlatch();
+    auto page = buffer_pool_manager_->FetchPage(leaf_->GetPageId());
     buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
+    page->RUnlatch();
+    // LOG_DEBUG("page %d is unlocked",page->GetPageId());
     buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
 
     auto next_page = buffer_pool_manager_->FetchPage(next_page_id);
     // lock next leaf
     next_page->RLatch();
-
+    // LOG_DEBUG("page %d is locked",next_page_id);
     leaf_ = reinterpret_cast<BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *>(next_page->GetData());
-  }
-  if (index_ == leaf_->GetSize() && leaf_->GetNextPageId() == INVALID_PAGE_ID) {
-    buffer_pool_manager_->FetchPage(leaf_->GetPageId())->RUnlatch();
+  } 
+  else if (index_ == leaf_->GetSize() - 1 && leaf_->GetNextPageId() == INVALID_PAGE_ID) {
+    index_++;
+    auto page = buffer_pool_manager_->FetchPage(leaf_->GetPageId());
     buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
+    page->RUnlatch();
+    // LOG_DEBUG("page %d is unlocked",page->GetPageId());
     buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
+  } 
+  else {
+    index_++;
   }
+
   return *this;
 }
 

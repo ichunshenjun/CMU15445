@@ -62,6 +62,7 @@ class ExecutionEngine {
 
     try {
       executor->Init();
+
       PollExecutor(executor.get(), plan, result_set);
     } catch (const ExecutionException &ex) {
 #ifndef NDEBUG

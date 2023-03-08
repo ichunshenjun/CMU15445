@@ -16,10 +16,11 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
     : AbstractExecutor(exec_ctx), plan_(plan) {
   index_info_ = exec_ctx_->GetCatalog()->GetIndex(plan_->index_oid_);
   table_info_ = exec_ctx_->GetCatalog()->GetTable(index_info_->table_name_);
+  tree_ = dynamic_cast<BPlusTreeIndexForOneIntegerColumn *>(index_info_->index_.get()); 
   index_iter_ = tree_->GetBeginIterator();
 }
 
-void IndexScanExecutor::Init() { tree_ = dynamic_cast<BPlusTreeIndexForOneIntegerColumn *>(index_info_->index_.get()); }
+void IndexScanExecutor::Init() { index_iter_ = tree_->GetBeginIterator();}
 
 auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (index_iter_ == tree_->GetEndIterator()) {

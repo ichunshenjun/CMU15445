@@ -95,8 +95,8 @@ TEST(BPlusTreeTests, InsertTest1) {
   for (auto key : keys) {
     i++;
     index_key.SetFromInteger(key);
-    //  index_key.SetFromInteger(4);
-    LOG_DEBUG("delete key=%ld", key);
+    //  index_key.SetFromInteger(10);
+    // LOG_DEBUG("delete key=%ld", key);
     tree.Remove(index_key, transaction);
     // tree.Draw(bpm, "/home/zkz/bustub/test/storage/b_plus_tree_draw" + std::to_string(i) + ".dot");
   }
@@ -112,7 +112,7 @@ TEST(BPlusTreeTests, InsertTest1) {
   remove("test.log");
 }
 
-TEST(BPlusTreeTests, DISABLED_InsertTest2) {
+TEST(BPlusTreeTests, InsertTest2) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -194,7 +194,7 @@ TEST(BPlusTreeTests, DISABLED_InsertTest2) {
   remove("test.log");
 }
 
-TEST(BPlusTreeTests, DISABLED_InsertTest3) {
+TEST(BPlusTreeTests, InsertTest3) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());

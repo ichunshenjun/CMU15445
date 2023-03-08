@@ -86,7 +86,9 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Move(BPlusTreeInternalPage *page_data, Buff
   IncreaseSize(maxsize - minsize + 1);
   page_data->IncreaseSize(minsize - maxsize - 1);
 }
-/*当中间节点只有一个key时进行插入会出错（remove时可能出现这种情况先删除了key再进行合并或者borrow，这时候直接用setkey和setvalue*/
+/*当中间节点只有一个key时进行插入会出错（remove时可能出现这种情况先删除了key再进行合并或者borrow，
+这时候直接用setkey和setvalue
+*/
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType key, ValueType value, KeyComparator comparator) -> bool {
   if (comparator(key, KeyAt(1)) < 0) {

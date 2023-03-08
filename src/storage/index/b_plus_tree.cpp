@@ -113,6 +113,7 @@ INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, OpType op, Transaction *transaction, bool mostLeft) -> Page * {
   bool exclusive = (op != OpType::READ);
   LockRootPageId(exclusive);
+  // LOG_DEBUG("root is locked");
   auto find_page_id = root_page_id_;
   auto new_page_id = INVALID_PAGE_ID;
   auto find_page = CrabingProtocalFetchPage(find_page_id, op, -1, transaction);
@@ -274,7 +275,7 @@ void BPLUSTREE_TYPE::DeleteKey(BPlusTreePage *page_data, const KeyType &key, Tra
     auto internal_page_data = reinterpret_cast<InternalPage *>(page_data);
     internal_page_data->Remove(key, comparator_);
   }
-  if (page_data->IsRootPage() && page_data->GetSize() == 0){
+  if (page_data->IsRootPage() && page_data->GetSize() == 0) {
     root_page_id_ = INVALID_PAGE_ID;
   }
   if (page_data->IsRootPage() && page_data->GetSize() == 1 && !page_data->IsLeafPage()) {
@@ -285,7 +286,7 @@ void BPLUSTREE_TYPE::DeleteKey(BPlusTreePage *page_data, const KeyType &key, Tra
     assert(new_root_page);
     auto new_root_page_data = reinterpret_cast<BPlusTreePage *>(new_root_page->GetData());
     new_root_page_data->SetParentPageId(INVALID_PAGE_ID);
-    root_page_id_=new_root_page_id;
+    root_page_id_ = new_root_page_id;
     UpdateRootPageId(0);
     buffer_pool_manager_->UnpinPage(new_root_page_id, true);
     // buffer_pool_manager_->DeletePage(root_page_id);
@@ -315,23 +316,19 @@ void BPLUSTREE_TYPE::DeleteKey(BPlusTreePage *page_data, const KeyType &key, Tra
       right_page_data = reinterpret_cast<BPlusTreePage *>(right_page->GetData());
     }
     buffer_pool_manager_->UnpinPage(parent_page_data->GetPageId(), false);
-    int maxsize=0;
-    if(page_data->IsLeafPage()){
-      maxsize=page_data->GetMaxSize();
-    }
-    else{
-      maxsize=page_data->GetMaxSize()+1;
+    int maxsize = 0;
+    if (page_data->IsLeafPage()) {
+      maxsize = page_data->GetMaxSize();
+    } else {
+      maxsize = page_data->GetMaxSize() + 1;
     }
     if (left_page_data != nullptr && left_page_data->GetSize() + page_data->GetSize() >= maxsize) {
       Borrow(left_page_data, page_data, parent_page_data->ValueIndex(page_data->GetPageId()));
-    } else if (right_page_data != nullptr &&
-               right_page_data->GetSize() + page_data->GetSize() >= maxsize) {
+    } else if (right_page_data != nullptr && right_page_data->GetSize() + page_data->GetSize() >= maxsize) {
       Borrow(right_page_data, page_data, parent_page_data->ValueIndex(right_page_data->GetPageId()));
-    } else if (left_page_data != nullptr &&
-               left_page_data->GetSize() + page_data->GetSize() < maxsize) {
+    } else if (left_page_data != nullptr && left_page_data->GetSize() + page_data->GetSize() < maxsize) {
       Merge(left_page_data, page_data, parent_page_data->ValueIndex(page_data->GetPageId()), transaction);
-    } else if (right_page_data != nullptr &&
-               right_page_data->GetSize() + page_data->GetSize() < maxsize) {
+    } else if (right_page_data != nullptr && right_page_data->GetSize() + page_data->GetSize() < maxsize) {
       Merge(right_page_data, page_data, parent_page_data->ValueIndex(right_page_data->GetPageId()), transaction);
     }
     // if (left_page_id != INVALID_PAGE_ID) {
@@ -390,9 +387,10 @@ void BPLUSTREE_TYPE::Borrow(BPlusTreePage *sibling_page_data, BPlusTreePage *pag
       auto first_key = sibling_internal_data->KeyAt(1);
       auto first_value = sibling_internal_data->ValueAt(0);
       sibling_internal_data->PopFirst();
-      // internal_page_data->Insert(parent_page_data->KeyAt(index), first_value, comparator_); 不使用插入因为有可能中间节点这时只有一个key
-      internal_page_data->SetKeyAt(internal_page_data->GetSize(),parent_page_data->KeyAt(index));
-      internal_page_data->SetValueAt(internal_page_data->GetSize(),first_value);
+      // internal_page_data->Insert(parent_page_data->KeyAt(index), first_value, comparator_);
+      // 不使用插入因为有可能中间节点这时只有一个key
+      internal_page_data->SetKeyAt(internal_page_data->GetSize(), parent_page_data->KeyAt(index));
+      internal_page_data->SetValueAt(internal_page_data->GetSize(), first_value);
       internal_page_data->IncreaseSize(1);
       // update child
       auto child_page_id = first_value;
@@ -476,7 +474,7 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
         auto child_page = buffer_pool_manager_->FetchPage(child_page_id);
         if (child_page == nullptr) {
           throw std::runtime_error("valid page id do not exist");
-        }       
+        }
         auto child_page_data = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
         child_page_data->SetParentPageId(internal_page_data->GetPageId());
         buffer_pool_manager_->UnpinPage(child_page_id, true);
@@ -500,8 +498,8 @@ void BPLUSTREE_TYPE::Merge(BPlusTreePage *sibling_page_data, BPlusTreePage *page
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
-  if (root_page_id_ == INVALID_PAGE_ID) {
-    return INDEXITERATOR_TYPE();
+  if (IsEmpty()) {
+    return INDEXITERATOR_TYPE(nullptr, 0, nullptr);
   }
   KeyType useless;
   auto find_page_data = FindLeafPage(useless, OpType::READ, nullptr, true);
@@ -516,8 +514,8 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
-  if (root_page_id_ == INVALID_PAGE_ID) {
-    return INDEXITERATOR_TYPE();
+  if (IsEmpty()) {
+    return INDEXITERATOR_TYPE(nullptr, 0, nullptr);
   }
   auto leaf_page = FindLeafPage(key, OpType::READ, nullptr);
   TryUnlockRootPageId(false);
@@ -532,6 +530,9 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
+  if (IsEmpty()) {
+    return INDEXITERATOR_TYPE(nullptr, 0, nullptr);
+  }
   bool exclusive = false;
   LockRootPageId(exclusive);
   auto find_page_id = root_page_id_;
@@ -553,6 +554,9 @@ auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
     }
     find_page_data = reinterpret_cast<BPlusTreePage *>(find_page->GetData());
   }
+  find_page->RUnlatch();
+  TryUnlockRootPageId(exclusive);
+  // LOG_DEBUG("page %d is unlocked",find_page->GetPageId());
   return INDEXITERATOR_TYPE(reinterpret_cast<LeafPage *>(find_page_data), find_page_data->GetSize(),
                             buffer_pool_manager_);
 }
