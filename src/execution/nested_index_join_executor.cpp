@@ -42,6 +42,7 @@ auto NestIndexJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   while(child_excutor_->Next(&left_tuple , &rid_temp)){
   auto value=plan_->KeyPredicate()->Evaluate(&left_tuple, child_excutor_->GetOutputSchema());
   std::vector<RID> rids;
+  //因为左右表连接谓词列的value都是相等的
   tree_->ScanKey(Tuple{{value},index_info_->index_->GetKeySchema()}, &rids, exec_ctx_->GetTransaction());
   Tuple right_tuple{};
   if(!rids.empty()){
