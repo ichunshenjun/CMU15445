@@ -52,16 +52,14 @@ auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
     next_page->RLatch();
     // LOG_DEBUG("page %d is locked",next_page_id);
     leaf_ = reinterpret_cast<BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *>(next_page->GetData());
-  } 
-  else if (index_ == leaf_->GetSize() - 1 && leaf_->GetNextPageId() == INVALID_PAGE_ID) {
+  } else if (index_ == leaf_->GetSize() - 1 && leaf_->GetNextPageId() == INVALID_PAGE_ID) {
     index_++;
     auto page = buffer_pool_manager_->FetchPage(leaf_->GetPageId());
     buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
     page->RUnlatch();
     // LOG_DEBUG("page %d is unlocked",page->GetPageId());
     buffer_pool_manager_->UnpinPage(leaf_->GetPageId(), false);
-  } 
-  else {
+  } else {
     index_++;
   }
 

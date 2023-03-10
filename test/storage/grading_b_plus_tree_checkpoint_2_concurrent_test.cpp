@@ -27,7 +27,7 @@
 namespace bustub {
 // helper function to launch multiple threads
 template <typename... Args>
-void LaunchParallelTest(uint64_t num_threads, uint64_t txn_id_start, Args &&...args) {
+void LaunchParallelTest(uint64_t num_threads, uint64_t txn_id_start, Args &&... args) {
   std::vector<std::thread> thread_group;
 
   // Launch a group of threads

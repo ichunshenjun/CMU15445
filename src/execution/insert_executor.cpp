@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "common/logger.h"
 #include "execution/executors/insert_executor.h"
 #include "type/type_id.h"
 
@@ -20,12 +21,12 @@ namespace bustub {
 InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {
-  this->table_info_ = exec_ctx->GetCatalog()->GetTable(plan_->table_oid_);
+  this->table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->table_oid_);
 }
 
-void InsertExecutor::Init() { 
+void InsertExecutor::Init() {
   child_executor_->Init();
-  table_indexes_=exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
+  table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {

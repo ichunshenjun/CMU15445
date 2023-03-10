@@ -20,73 +20,75 @@ namespace bustub {
 NestedLoopJoinExecutor::NestedLoopJoinExecutor(ExecutorContext *exec_ctx, const NestedLoopJoinPlanNode *plan,
                                                std::unique_ptr<AbstractExecutor> &&left_executor,
                                                std::unique_ptr<AbstractExecutor> &&right_executor)
-    : AbstractExecutor(exec_ctx),plan_(plan),left_executor_(std::move(left_executor)),right_executor_(std::move(right_executor)) {
+    : AbstractExecutor(exec_ctx),
+      plan_(plan),
+      left_executor_(std::move(left_executor)),
+      right_executor_(std::move(right_executor)) {
   if (plan->GetJoinType() != JoinType::LEFT && plan->GetJoinType() != JoinType::INNER) {
     // Note for 2022 Fall: You ONLY need to implement left join and inner join.
     throw bustub::NotImplementedException(fmt::format("join type {} not supported", plan->GetJoinType()));
   }
 }
 
-void NestedLoopJoinExecutor::Init() { 
+void NestedLoopJoinExecutor::Init() {
   RID rid{};
   left_executor_->Init();
   right_executor_->Init();
-  left_executor_->Next(&left_tuple_,&rid);
+  left_executor_->Next(&left_tuple_, &rid);
   // right_executor_->Next(&right_tuple_,&rid);
   // left_executor_->Init();
   // right_executor_->Init();
 }
 
-auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool { 
+auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   RID rid_temp{};
   // while(true){
   //   if (left_tuple_ == nullptr || right_tuple_ == nullptr) {
   //     return false;
   //   }
-    while(true){
-      std::vector<Value> vals;
-      if(right_executor_->Next(&right_tuple_, &rid_temp)){
-        if(Matched(&left_tuple_, &right_tuple_)){
-          for (uint32_t idx = 0; idx < left_executor_->GetOutputSchema().GetColumnCount(); idx++) {
-            vals.push_back(left_tuple_.GetValue(&left_executor_->GetOutputSchema(), idx));
-          }
-          for (uint32_t idx = 0; idx < right_executor_->GetOutputSchema().GetColumnCount(); idx++) {
-            vals.push_back(right_tuple_.GetValue(&right_executor_->GetOutputSchema(), idx));
-          }
-          *tuple = Tuple(vals, &GetOutputSchema());
-          match_flag_=1;
-          return true;
+  while (true) {
+    std::vector<Value> vals;
+    if (right_executor_->Next(&right_tuple_, &rid_temp)) {
+      if (Matched(&left_tuple_, &right_tuple_)) {
+        for (uint32_t idx = 0; idx < left_executor_->GetOutputSchema().GetColumnCount(); idx++) {
+          vals.push_back(left_tuple_.GetValue(&left_executor_->GetOutputSchema(), idx));
         }
-      }else{
-        if(match_flag_==-1&&plan_->GetJoinType()==JoinType::LEFT){
-          for (uint32_t idx = 0; idx < left_executor_->GetOutputSchema().GetColumnCount(); idx++) {
-            vals.push_back(left_tuple_.GetValue(&left_executor_->GetOutputSchema(), idx));
-          }
-           for (uint32_t idx = 0; idx < right_executor_->GetOutputSchema().GetColumnCount(); idx++) {
-            vals.push_back(ValueFactory::GetNullValueByType(right_executor_->GetOutputSchema().GetColumn(idx).GetType()));
-          }
-          *tuple = Tuple(vals, &GetOutputSchema());
-          if(left_executor_->Next(&left_tuple_,&rid_temp)){
-            right_executor_->Init();
-            match_flag_=-1;
-          }
-          else{
-            match_flag_=0;
-            return true;
-          }
-          return true;
+        for (uint32_t idx = 0; idx < right_executor_->GetOutputSchema().GetColumnCount(); idx++) {
+          vals.push_back(right_tuple_.GetValue(&right_executor_->GetOutputSchema(), idx));
         }
-        if(match_flag_==0){
-          return false;
+        *tuple = Tuple(vals, &GetOutputSchema());
+        match_flag_ = 1;
+        return true;
+      }
+    } else {
+      if (match_flag_ == -1 && plan_->GetJoinType() == JoinType::LEFT) {
+        for (uint32_t idx = 0; idx < left_executor_->GetOutputSchema().GetColumnCount(); idx++) {
+          vals.push_back(left_tuple_.GetValue(&left_executor_->GetOutputSchema(), idx));
         }
-        if(left_executor_->Next(&left_tuple_,&rid_temp)){
+        for (uint32_t idx = 0; idx < right_executor_->GetOutputSchema().GetColumnCount(); idx++) {
+          vals.push_back(ValueFactory::GetNullValueByType(right_executor_->GetOutputSchema().GetColumn(idx).GetType()));
+        }
+        *tuple = Tuple(vals, &GetOutputSchema());
+        if (left_executor_->Next(&left_tuple_, &rid_temp)) {
           right_executor_->Init();
-          match_flag_=-1;
-        }else{
-          return false;
+          match_flag_ = -1;
+        } else {
+          match_flag_ = 0;
+          return true;
         }
+        return true;
+      }
+      if (match_flag_ == 0) {
+        return false;
+      }
+      if (left_executor_->Next(&left_tuple_, &rid_temp)) {
+        right_executor_->Init();
+        match_flag_ = -1;
+      } else {
+        return false;
       }
     }
+  }
 
   // }
 }
