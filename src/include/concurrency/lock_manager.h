@@ -64,7 +64,8 @@ class LockManager {
   class LockRequestQueue {
    public:
     /** List of lock requests for the same resource (table or row) */
-    std::list<LockRequest *> request_queue_;
+    // std::list<LockRequest *> request_queue_;
+    std::list<std::shared_ptr<LockRequest>> request_queue_;
     /** For notifying blocked transactions on this rid */
     std::condition_variable cv_;
     /** txn_id of an upgrading transaction (if any) */
@@ -288,6 +289,33 @@ class LockManager {
   auto HasCycle(txn_id_t *txn_id) -> bool;
 
   /**
+   * Modify transaction tablelock
+   */
+  void InsertOrDeleteTableLockSet(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request, bool insert);
+  auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,
+                 const std::shared_ptr<LockRequestQueue> &lock_request_queue) -> bool;
+  /**
+   * Modify transaction rowlock
+   */
+  void InsertOrDeleteRowLockSet(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request, bool insert);
+  void InsertRowLockSet(const std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,
+                        const table_oid_t &oid, const RID &rid) {
+    auto row_lock_set = lock_set->find(oid);
+    if (row_lock_set == lock_set->end()) {
+      lock_set->emplace(oid, std::unordered_set<RID>{});
+      row_lock_set = lock_set->find(oid);
+    }
+    row_lock_set->second.emplace(rid);
+  }
+  void DeleteRowLockSet(const std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,
+                        const table_oid_t &oid, const RID &rid) {
+    auto row_lock_set = lock_set->find(oid);
+    if (row_lock_set == lock_set->end()) {
+      return;
+    }
+    row_lock_set->second.erase(rid);
+  }
+  /**
    * @return all edges in current waits_for graph
    */
   auto GetEdgeList() -> std::vector<std::pair<txn_id_t, txn_id_t>>;
@@ -296,6 +324,8 @@ class LockManager {
    * Runs cycle detection in the background.
    */
   auto RunCycleDetection() -> void;
+
+  auto DFS(txn_id_t txn_id) -> bool;
 
  private:
   /** Fall 2022 */
@@ -314,6 +344,13 @@ class LockManager {
   /** Waits-for graph representation. */
   std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;
+
+  std::unordered_set<txn_id_t> cycle_txn_id_;
+  std::unordered_set<txn_id_t> searched_txn_id_;
+  // 用于存放未获得锁的事务与表的对应关系
+  std::unordered_map<txn_id_t, table_oid_t> txn_table_map_;
+  // 用于存放未获得锁的事务与行的对应关系
+  std::unordered_map<txn_id_t, RID> txn_row_map_;
 };
 
 }  // namespace bustub
