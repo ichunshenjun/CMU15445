@@ -13,7 +13,7 @@
 #include "concurrency/lock_manager.h"
 #include <list>
 #include <memory>
-#include <mutex>
+#include <mutex>  // NOLINT
 #include <unordered_set>
 
 #include "common/config.h"
@@ -59,7 +59,7 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
   table_lock_map_latch_.unlock();
 
   // examine lock
-  for (auto request : lock_request_queue->request_queue_) {
+  for (auto request : lock_request_queue->request_queue_) {  // NOLINT :如果使用&但后面要remove会使得变量为一个空的对象
     if (request->txn_id_ == txn->GetTransactionId()) {
       // 已经存在同样的请求
       if (request->lock_mode_ == lock_mode) {
@@ -164,7 +164,7 @@ auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool 
   auto lock_request_queue = table_lock_map_[oid];
   lock_request_queue->latch_.lock();
   table_lock_map_latch_.unlock();
-  for (auto lock_request : lock_request_queue->request_queue_) {
+  for (auto lock_request : lock_request_queue->request_queue_) {  // NOLINT
     if (lock_request->txn_id_ == txn->GetTransactionId() && lock_request->granted_) {
       lock_request_queue->request_queue_.remove(lock_request);
       lock_request_queue->cv_.notify_all();
@@ -239,7 +239,7 @@ auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_
   row_lock_map_latch_.unlock();
 
   // examine lock
-  for (auto request : lock_request_queue->request_queue_) {
+  for (auto request : lock_request_queue->request_queue_) {  // NOLINT
     if (request->txn_id_ == txn->GetTransactionId()) {
       // 已经存在同样的请求
       if (request->lock_mode_ == lock_mode) {
@@ -332,7 +332,7 @@ auto LockManager::UnlockRow(Transaction *txn, const table_oid_t &oid, const RID 
   auto lock_request_queue = row_lock_map_[rid];
   lock_request_queue->latch_.lock();
   row_lock_map_latch_.unlock();
-  for (auto lock_request : lock_request_queue->request_queue_) {
+  for (auto lock_request : lock_request_queue->request_queue_) {  // NOLINT
     if (lock_request->txn_id_ == txn->GetTransactionId() && lock_request->granted_) {
       lock_request_queue->request_queue_.remove(lock_request);
       lock_request_queue->cv_.notify_all();
@@ -357,29 +357,31 @@ auto LockManager::UnlockRow(Transaction *txn, const table_oid_t &oid, const RID 
 }
 
 void LockManager::AddEdge(txn_id_t t1, txn_id_t t2) {
+  txn_set_.insert(t1);
+  txn_set_.insert(t2);
   waits_for_[t1].push_back(t2);
 }
 
 void LockManager::RemoveEdge(txn_id_t t1, txn_id_t t2) {
-  auto iter=std::find(waits_for_[t1].begin(),waits_for_[t1].end(),t2);
-  if(iter!=waits_for_[t1].end()){
+  auto iter = std::find(waits_for_[t1].begin(), waits_for_[t1].end(), t2);
+  if (iter != waits_for_[t1].end()) {
     waits_for_[t1].erase(iter);
   }
 }
 
-auto LockManager::HasCycle(txn_id_t *txn_id) -> bool { 
-  for(const auto &pair:waits_for_){
-    if(DFS(pair.first)){
-      *txn_id=*cycle_txn_id_.begin();
-      for(const auto &cycle_txn_id:cycle_txn_id_){
-        *txn_id=std::max(*txn_id,cycle_txn_id);
+auto LockManager::HasCycle(txn_id_t *txn_id) -> bool {
+  for (const auto &start_txn_id : txn_set_) {
+    if (DFS(start_txn_id)) {
+      *txn_id = *cycle_txn_id_.begin();
+      for (const auto &cycle_txn_id : cycle_txn_id_) {
+        *txn_id = std::max(*txn_id, cycle_txn_id);
       }
       cycle_txn_id_.clear();
       return true;
     }
     cycle_txn_id_.clear();
   }
-  return false; 
+  return false;
 }
 
 void LockManager::InsertOrDeleteTableLockSet(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request,
@@ -490,9 +492,9 @@ auto LockManager::GrantLock(const std::shared_ptr<LockRequest> &lock_request,
 
 auto LockManager::GetEdgeList() -> std::vector<std::pair<txn_id_t, txn_id_t>> {
   std::vector<std::pair<txn_id_t, txn_id_t>> edges;
-  for(const auto &pair:waits_for_){
-    for(const auto &t2:pair.second){
-      edges.emplace_back(pair.first,t2);
+  for (const auto &pair : waits_for_) {
+    for (const auto &t2 : pair.second) {
+      edges.emplace_back(pair.first, t2);
     }
   }
   return edges;
@@ -505,79 +507,80 @@ void LockManager::RunCycleDetection() {
     {  // TODO(students): detect deadlock
       table_lock_map_latch_.lock();
       row_lock_map_latch_.lock();
-      for(auto &pair:table_lock_map_){
+      for (auto &pair : table_lock_map_) {
         std::unordered_set<txn_id_t> granted_set;
         pair.second->latch_.lock();
-        for(auto const & lock_request:pair.second->request_queue_){
-          if(lock_request->granted_){
+        for ( const auto &lock_request : pair.second->request_queue_) {
+          if (lock_request->granted_) {
             granted_set.emplace(lock_request->txn_id_);
-          }else{
-            for(const auto &txn_id:granted_set){
-              txn_table_map_.emplace(lock_request->txn_id_,lock_request->oid_);
+          } else {
+            for (auto txn_id : granted_set) {
+              txn_table_map_.emplace(lock_request->txn_id_, lock_request->oid_);
               AddEdge(lock_request->txn_id_, txn_id);
             }
           }
         }
         pair.second->latch_.unlock();
       }
-      for(auto &pair:row_lock_map_){
+      for (auto &pair : row_lock_map_) {
         std::unordered_set<txn_id_t> granted_set;
         pair.second->latch_.lock();
-        for(auto const & lock_request:pair.second->request_queue_){
-          if(lock_request->granted_){
+        for (const auto &lock_request : pair.second->request_queue_) {
+          if (lock_request->granted_) {
             granted_set.emplace(lock_request->txn_id_);
-          }else{
-            for(const auto &txn_id:granted_set){
-              txn_row_map_.emplace(lock_request->txn_id_,lock_request->rid_);
+          } else {
+            for (auto txn_id : granted_set) {
+              txn_row_map_.emplace(lock_request->txn_id_, lock_request->rid_);
               AddEdge(lock_request->txn_id_, txn_id);
             }
           }
         }
         pair.second->latch_.unlock();
       }
-      table_lock_map_latch_.unlock();
       row_lock_map_latch_.unlock();
+      table_lock_map_latch_.unlock();
       txn_id_t txn_id;
-      while(HasCycle(&txn_id)){
-        Transaction *txn=TransactionManager::GetTransaction(txn_id);
+      while (HasCycle(&txn_id)) {
+        Transaction *txn = TransactionManager::GetTransaction(txn_id);
         txn->SetState(TransactionState::ABORTED);
         waits_for_.erase(txn_id);
-        for(auto [t1,v]:waits_for_){
-          if(t1!=txn_id){
+        for (auto t1 : txn_set_) {
+          if (t1 != txn_id) {
             RemoveEdge(t1, txn_id);
           }
         }
-        if(txn_table_map_.count(txn_id)>0){
+        if (txn_table_map_.count(txn_id) > 0) {
           table_lock_map_[txn_table_map_[txn_id]]->latch_.lock();
           table_lock_map_[txn_table_map_[txn_id]]->cv_.notify_all();
           table_lock_map_[txn_table_map_[txn_id]]->latch_.unlock();
         }
-        if(txn_row_map_.count(txn_id)>0){
+        if (txn_row_map_.count(txn_id) > 0) {
           row_lock_map_[txn_row_map_[txn_id]]->latch_.lock();
           row_lock_map_[txn_row_map_[txn_id]]->cv_.notify_all();
           row_lock_map_[txn_row_map_[txn_id]]->latch_.unlock();
         }
-        searched_txn_id_.clear();
-        waits_for_.clear();
-        txn_table_map_.clear();
-        txn_row_map_.clear();
       }
+      searched_txn_id_.clear();
+      waits_for_.clear();
+      txn_set_.clear();
+      txn_table_map_.clear();
+      txn_row_map_.clear();
     }
   }
 }
 // 按算法来说cycle_txn_id_里应该不只是圈的结点，难道不存在1->3->6->2->6这种，只会有6->2->6吗？
-auto LockManager::DFS(txn_id_t txn_id) -> bool{
-  if(searched_txn_id_.find(txn_id)!=searched_txn_id_.end()){
+auto LockManager::DFS(txn_id_t txn_id) -> bool {
+  if (searched_txn_id_.find(txn_id) != searched_txn_id_.end()) {
     return false;
   }
   cycle_txn_id_.insert(txn_id);
-  auto start=waits_for_[txn_id];
-  std::sort(start.begin(),start.end());
-  for(int iter : start){
-    if(cycle_txn_id_.find(iter)!=cycle_txn_id_.end()){
+  auto start = waits_for_[txn_id];
+  std::sort(start.begin(), start.end());
+  for (int iter : start) {
+    if (cycle_txn_id_.find(iter) != cycle_txn_id_.end()) {
       return true;
     }
-    if(DFS(iter)){
+    if (DFS(iter)) {
       return true;
     }
   }

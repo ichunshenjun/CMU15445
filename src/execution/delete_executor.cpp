@@ -25,6 +25,15 @@ DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *
 
 void DeleteExecutor::Init() {
   child_executor_->Init();
+  try {
+    auto lock_success = exec_ctx_->GetLockManager()->LockTable(
+        exec_ctx_->GetTransaction(), LockManager::LockMode::INTENTION_EXCLUSIVE, table_info_->oid_);
+    if (!lock_success) {
+      throw ExecutionException("Delete Executor Get Table Lock Failed");
+    }
+  } catch (TransactionAbortException e) {
+    throw ExecutionException("Delete Executor Get Table Lock Failed");
+  }
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
@@ -34,7 +43,18 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   }
   int cnt = 0;
   while (child_executor_->Next(tuple, rid)) {
-    table_info_->table_->MarkDelete(*rid, exec_ctx_->GetTransaction());
+    auto delete_success = table_info_->table_->MarkDelete(*rid, exec_ctx_->GetTransaction());
+    if (delete_success) {
+      try {
+        auto lock_success = exec_ctx_->GetLockManager()->LockRow(
+            exec_ctx_->GetTransaction(), LockManager::LockMode::EXCLUSIVE, table_info_->oid_, *rid);
+        if (!lock_success) {
+          throw ExecutionException("Delete Executor Get Table Lock Failed");
+        }
+      } catch (TransactionAbortException e) {
+        throw ExecutionException("Delete Executor Get Row Lock Failed");
+      }
+    }
     for (auto index_info : table_indexes_) {
       const auto key =
           tuple->KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs());

@@ -17,6 +17,7 @@
 #include <list>
 #include <memory>
 #include <mutex>  // NOLINT
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -351,6 +352,8 @@ class LockManager {
   std::unordered_map<txn_id_t, table_oid_t> txn_table_map_;
   // 用于存放未获得锁的事务与行的对应关系
   std::unordered_map<txn_id_t, RID> txn_row_map_;
+  // 由于waits_for_的遍历顺序是不确定的，用set来遍历
+  std::set<txn_id_t> txn_set_;
 };
 
 }  // namespace bustub
