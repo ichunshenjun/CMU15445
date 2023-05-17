@@ -84,12 +84,17 @@ class Tuple {
   }
   inline auto IsAllocated() -> bool { return allocated_; }
 
+  inline auto IsValid() -> bool { return valid_; }
+
+  inline void SetValid(bool valid) { valid_ = valid; }
+
   auto ToString(const Schema *schema) const -> std::string;
 
  private:
   // Get the starting storage address of specific column
   auto GetDataPtr(const Schema *schema, uint32_t column_idx) const -> const char *;
 
+  bool valid_{false};
   bool allocated_{false};  // is allocated?
   RID rid_{};              // if pointing to the table heap, the rid is valid
   uint32_t size_{0};

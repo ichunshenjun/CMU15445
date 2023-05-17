@@ -21,7 +21,7 @@
 namespace bustub {
 
 // TODO(Amadou): It does not look like nulls are supported. Add a null bitmap?
-Tuple::Tuple(std::vector<Value> values, const Schema *schema) : allocated_(true) {
+Tuple::Tuple(std::vector<Value> values, const Schema *schema) : valid_{true}, allocated_(true) {
   assert(values.size() == schema->GetColumnCount());
 
   // 1. Calculate the size of the tuple.
@@ -61,7 +61,8 @@ Tuple::Tuple(std::vector<Value> values, const Schema *schema) : allocated_(true)
   }
 }
 
-Tuple::Tuple(const Tuple &other) : allocated_(other.allocated_), rid_(other.rid_), size_(other.size_) {
+Tuple::Tuple(const Tuple &other)
+    : valid_{other.valid_}, allocated_(other.allocated_), rid_(other.rid_), size_(other.size_) {
   if (allocated_) {
     delete[] data_;
   }
