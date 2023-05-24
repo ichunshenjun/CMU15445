@@ -165,6 +165,8 @@ class SimpleAggregationHashTable {
 
   auto Size() -> int { return ht_.size(); }
 
+  void Clear() { ht_.clear(); }
+
  private:
   /** The hash table is just a map from aggregate keys to aggregate values */
   std::unordered_map<AggregateKey, AggregateValue> ht_{};

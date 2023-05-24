@@ -14,7 +14,7 @@
 
 #include <algorithm>
 #include <memory>
-#include <mutex> // NOLINT
+#include <mutex>  // NOLINT
 #include <stdexcept>
 #include "common/config.h"
 #include "common/logger.h"

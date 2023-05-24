@@ -29,6 +29,7 @@ void AggregationExecutor::Init() {
   child_->Init();
   RID rid{};
   Tuple tuple{};
+  aht_.Clear();
   while (child_->Next(&tuple, &rid)) {
     auto key = MakeAggregateKey(&tuple);
     auto value = MakeAggregateValue(&tuple);
