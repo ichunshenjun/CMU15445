@@ -56,7 +56,6 @@ auto NestIndexJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     }
   }
   return false;
-  ;
 }
 
 }  // namespace bustub

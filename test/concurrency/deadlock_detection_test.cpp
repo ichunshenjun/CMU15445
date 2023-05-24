@@ -63,7 +63,7 @@ TEST(LockManagerDeadlockDetectionTest, EdgeTest) {
   }
 }
 
-TEST(LockManagerDeadlockDetectionTest,BasicDeadlockDetectionTest) {
+TEST(LockManagerDeadlockDetectionTest, BasicDeadlockDetectionTest) {
   LockManager lock_mgr{};
   TransactionManager txn_mgr{&lock_mgr};
 

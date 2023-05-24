@@ -73,43 +73,42 @@ class SimpleAggregationHashTable {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
       switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
-          if(result->aggregates_[i].IsNull()){
-            result->aggregates_[i]=ValueFactory::GetIntegerValue(0);
-          }
-          else{
-            result->aggregates_[i]=result->aggregates_[i].Add(ValueFactory::GetIntegerValue(1));
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = ValueFactory::GetIntegerValue(0);
+          } else {
+            result->aggregates_[i] = result->aggregates_[i].Add(ValueFactory::GetIntegerValue(1));
           }
           break;
         case AggregationType::CountAggregate:
-          if(result->aggregates_[i].IsNull()){
-            result->aggregates_[i]=ValueFactory::GetIntegerValue(0);
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = ValueFactory::GetIntegerValue(0);
           }
-          if(!input.aggregates_[i].IsNull()){
-            result->aggregates_[i]=result->aggregates_[i].Add(ValueFactory::GetIntegerValue(1));
+          if (!input.aggregates_[i].IsNull()) {
+            result->aggregates_[i] = result->aggregates_[i].Add(ValueFactory::GetIntegerValue(1));
           }
           break;
         case AggregationType::SumAggregate:
-          if(result->aggregates_[i].IsNull()){
-            result->aggregates_[i]=ValueFactory::GetIntegerValue(0);
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = ValueFactory::GetIntegerValue(0);
           }
-          if(!input.aggregates_[i].IsNull()){
-            result->aggregates_[i]=result->aggregates_[i].Add(input.aggregates_[i]);
+          if (!input.aggregates_[i].IsNull()) {
+            result->aggregates_[i] = result->aggregates_[i].Add(input.aggregates_[i]);
           }
           break;
         case AggregationType::MinAggregate:
-          if(result->aggregates_[i].IsNull()){
-            result->aggregates_[i]=input.aggregates_[i];
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = input.aggregates_[i];
           }
-          if(!input.aggregates_[i].IsNull()){
-            result->aggregates_[i]=result->aggregates_[i].Min(input.aggregates_[i]);
+          if (!input.aggregates_[i].IsNull()) {
+            result->aggregates_[i] = result->aggregates_[i].Min(input.aggregates_[i]);
           }
           break;
         case AggregationType::MaxAggregate:
-          if(result->aggregates_[i].IsNull()){
-            result->aggregates_[i]=input.aggregates_[i];
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = input.aggregates_[i];
           }
-          if(!input.aggregates_[i].IsNull()){
-            result->aggregates_[i]=result->aggregates_[i].Max(input.aggregates_[i]);
+          if (!input.aggregates_[i].IsNull()) {
+            result->aggregates_[i] = result->aggregates_[i].Max(input.aggregates_[i]);
           }
           break;
       }
@@ -128,9 +127,7 @@ class SimpleAggregationHashTable {
     CombineAggregateValues(&ht_[agg_key], agg_val);
   }
 
-  void InsertIntialCombine(){
-    ht_.insert({{std::vector<Value>()},GenerateInitialAggregateValue()});
-  }
+  void InsertIntialCombine() { ht_.insert({{std::vector<Value>()}, GenerateInitialAggregateValue()}); }
   /** An iterator over the aggregation hash table */
   class Iterator {
    public:
@@ -166,7 +163,7 @@ class SimpleAggregationHashTable {
   /** @return Iterator to the end of the hash table */
   auto End() -> Iterator { return Iterator{ht_.cend()}; }
 
-  auto Size() -> int {return ht_.size();}
+  auto Size() -> int { return ht_.size(); }
 
  private:
   /** The hash table is just a map from aggregate keys to aggregate values */

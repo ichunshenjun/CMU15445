@@ -264,25 +264,28 @@ class LockManager {
    */
   auto UnlockRow(Transaction *txn, const table_oid_t &oid, const RID &rid) -> bool;
 
-  void InsertOrDeleteTableLockSet(Transaction *txn,std::shared_ptr<LockRequest> &lock_request,bool insert);
-  
-  void InsertOrDeleteRowLockSet(Transaction *txn,std::shared_ptr<LockRequest> &lock_request,bool insert);
+  void InsertOrDeleteTableLockSet(Transaction *txn, std::shared_ptr<LockRequest> &lock_request, bool insert);
 
-  void InsertRowLockSet(std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,table_oid_t &oid,RID &rid){
-    if(lock_set->find(oid)==lock_set->end()){
-      lock_set->emplace(oid,std::unordered_set<RID>{});
+  void InsertOrDeleteRowLockSet(Transaction *txn, std::shared_ptr<LockRequest> &lock_request, bool insert);
+
+  void InsertRowLockSet(std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,
+                        table_oid_t &oid, RID &rid) {
+    if (lock_set->find(oid) == lock_set->end()) {
+      lock_set->emplace(oid, std::unordered_set<RID>{});
     }
     lock_set->at(oid).emplace(rid);
   }
 
-  void DeleteRowLockSet(std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,table_oid_t &oid,RID &rid){
-    if(lock_set->find(oid)==lock_set->end()){
+  void DeleteRowLockSet(std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,
+                        table_oid_t &oid, RID &rid) {
+    if (lock_set->find(oid) == lock_set->end()) {
       return;
     }
     lock_set->at(oid).erase(rid);
   }
 
-  auto GrantLock(std::shared_ptr<LockRequest> &lock_request,std::shared_ptr<LockRequestQueue> &lock_request_queue,bool upgrading)->bool;
+  auto GrantLock(std::shared_ptr<LockRequest> &lock_request, std::shared_ptr<LockRequestQueue> &lock_request_queue,
+                 bool upgrading) -> bool;
   /*** Graph API ***/
 
   /**
@@ -311,10 +314,10 @@ class LockManager {
    */
   auto GetEdgeList() -> std::vector<std::pair<txn_id_t, txn_id_t>>;
 
+  auto DFS(txn_id_t txn_id) -> bool;
 
-  auto DFS(txn_id_t txn_id)->bool;
-
-  auto IsCompatible(std::shared_ptr<LockRequest> &waiting_request,std::shared_ptr<LockRequest> &granted_request) -> bool;
+  auto IsCompatible(std::shared_ptr<LockRequest> &waiting_request, std::shared_ptr<LockRequest> &granted_request)
+      -> bool;
   /**
    * Runs cycle detection in the background.
    */
@@ -337,10 +340,10 @@ class LockManager {
   /** Waits-for graph representation. */
   std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;
-  
+
   std::unordered_set<txn_id_t> cycle_txn_id_;
-  std::unordered_map<txn_id_t,table_oid_t> txn_table_map_;
-  std::unordered_map<txn_id_t,RID> txn_row_map_;
+  std::unordered_map<txn_id_t, table_oid_t> txn_table_map_;
+  std::unordered_map<txn_id_t, RID> txn_row_map_;
 };
 
 }  // namespace bustub
