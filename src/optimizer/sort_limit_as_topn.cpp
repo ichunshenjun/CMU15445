@@ -20,6 +20,6 @@ auto Optimizer::OptimizeSortLimitAsTopN(const AbstractPlanNodeRef &plan) -> Abst
       return std::make_shared<TopNPlanNode>(lim_plan.output_schema_,sort_plan.GetChildAt(0),sort_plan.GetOrderBy(),lim_plan.GetLimit());
     }
   }
-  return plan;
+  return optimized_plan;
 }
 }  // namespace bustub

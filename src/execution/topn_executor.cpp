@@ -17,14 +17,14 @@ void TopNExecutor::Init() {
     auto cmp=[order_bys=plan_->GetOrderBy(),schema=child_executor_->GetOutputSchema()](const Tuple& tuple_a,const Tuple& tuple_b)->bool{
       for(const auto &order_by:order_bys){
         switch(order_by.first){
-          case OrderByType::ASC:
           case OrderByType::INVALID:
           case OrderByType::DEFAULT:
+          case OrderByType::ASC:
              if (static_cast<bool>(order_by.second->Evaluate(&tuple_a, schema)
                                         .CompareLessThan(order_by.second->Evaluate(&tuple_b, schema)))) {
                 return true;
               }
-              if(static_cast<bool>(order_by.second->Evaluate(&tuple_b,schema).CompareGreaterThan(order_by.second->Evaluate(&tuple_b, schema)))){
+              if(static_cast<bool>(order_by.second->Evaluate(&tuple_a,schema).CompareGreaterThan(order_by.second->Evaluate(&tuple_b, schema)))){
                 return false;
               }
           break;
