@@ -271,11 +271,11 @@ auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_
   std::unique_lock<std::mutex> lock(lock_request_queue->latch_,std::adopt_lock);
   while(!GrantLock(new_request,lock_request_queue,false)){
     lock_request_queue->cv_.wait(lock);
-    LOG_DEBUG("%d被唤醒了",txn->GetTransactionId());
+    // LOG_DEBUG("%d被唤醒了",txn->GetTransactionId());
     if(txn->GetState()==TransactionState::ABORTED){
       lock_request_queue->upgrading_=INVALID_TXN_ID;
       lock_request_queue->request_queue_.remove(new_request);
-      LOG_DEBUG("删除请求%d",txn->GetTransactionId());
+      // LOG_DEBUG("删除请求%d",txn->GetTransactionId());
       lock_request_queue->cv_.notify_all();
       return false;
     }
@@ -496,7 +496,7 @@ auto LockManager::HasCycle(txn_id_t *txn_id) -> bool {
         cycle_txn_id_.clear();
         if(DFS(edge.first)){
           *txn_id=*std::max_element(cycle_txn_id_.begin(),cycle_txn_id_.end());
-          LOG_DEBUG("find %d",*txn_id);
+          // LOG_DEBUG("find %d",*txn_id);
           return true;
         }
     }
@@ -542,9 +542,7 @@ auto LockManager::IsCompatible(std::shared_ptr<LockRequest> &waiting_request,std
    return true;
 }
 auto LockManager::DFS(txn_id_t txn_id)->bool{
-  LOG_DEBUG("seach %d",txn_id);
   if(cycle_txn_id_.find(txn_id)!=cycle_txn_id_.end()){
-    LOG_DEBUG("success");
     return true;
   }
   cycle_txn_id_.insert(txn_id);
@@ -568,12 +566,12 @@ void LockManager::RunCycleDetection() {
         auto lock_request_queue=iter->second->request_queue_;
         for(auto granted_request:lock_request_queue){ // NOLINT
           if(granted_request->granted_){
-            txn_table_map_.emplace(granted_request->txn_id_,granted_request->oid_);
             for(auto waiting_request:lock_request_queue){ // NOLINT
                 if(!waiting_request->granted_){
+                  txn_table_map_.emplace(waiting_request->txn_id_,waiting_request->oid_);
                   if(!IsCompatible(waiting_request,granted_request)){
                     AddEdge(waiting_request->txn_id_,granted_request->txn_id_);
-                    LOG_DEBUG("%d %d",waiting_request->txn_id_,granted_request->txn_id_);
+                    // LOG_DEBUG("%d %d",waiting_request->txn_id_,granted_request->txn_id_);
                   }
                 }
             }
@@ -586,12 +584,12 @@ void LockManager::RunCycleDetection() {
         auto lock_request_queue=iter->second->request_queue_;
         for(auto granted_request:lock_request_queue){ // NOLINT
           if(granted_request->granted_){
-            txn_row_map_.emplace(granted_request->txn_id_,granted_request->rid_);
             for(auto waiting_request:lock_request_queue){ // NOLINT
                 if(!waiting_request->granted_){
+                  txn_row_map_.emplace(waiting_request->txn_id_,waiting_request->rid_);
                   if(!IsCompatible(waiting_request,granted_request)){
                     AddEdge(waiting_request->txn_id_,granted_request->txn_id_);
-                    LOG_DEBUG("%d %d",waiting_request->txn_id_,granted_request->txn_id_);
+                    // LOG_DEBUG("%d %d",waiting_request->txn_id_,granted_request->txn_id_);
                   }
                 }
             }
@@ -609,7 +607,7 @@ void LockManager::RunCycleDetection() {
           RemoveEdge(txn_id, t2);
         }
         waits_for_.erase(txn_id);
-        LOG_DEBUG("erase %d",txn_id);
+        // LOG_DEBUG("erase %d",txn_id);
         if(txn_table_map_.count(txn_id)>0){
           table_lock_map_[txn_table_map_[txn_id]]->latch_.lock();
           table_lock_map_[txn_table_map_[txn_id]]->cv_.notify_all();
